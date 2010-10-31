@@ -133,6 +133,7 @@ else
 ifeq ($(os), WINNT)
   libdirs := $(patsubst %,-LIBPATH:%,$(libdirs))
   libs := $(patsubst %,$(sdkdir)/lib/%.lib,$(libs))
+	libdir_winnt_x86_msvc := ../../lib/WINNT_x86-msvc9
   headers += -I../../lib/WINNT_x86-msvc/include
 
   ifeq ($(debug),1)
@@ -156,12 +157,12 @@ ifeq ($(os), WINNT)
   ldflags += -DLL -NOLOGO -SUBSYSTEM:WINDOWS -NXCOMPAT -SAFESEH \
     -IMPLIB:fake.lib \
     $(libdirs) $(libs) \
-    ../../lib/WINNT_x86-msvc/libogg.lib \
-    ../../lib/WINNT_x86-msvc/libvorbis.lib \
-    ../../lib/WINNT_x86-msvc/libtheora.lib \
-    ../../lib/WINNT_x86-msvc/portaudio.lib \
-    ../../lib/WINNT_x86-msvc/libvidcap.lib \
-    strmiids.lib comsuppw.lib $(ldops)
+    $(libdir_winnt_x86_msvc)/libogg.lib \
+    $(libdir_winnt_x86_msvc)/libvorbis.lib \
+	 	$(libdir_winnt_x86_msvc)/libtheora.lib \
+    $(libdir_winnt_x86_msvc)/portaudio.lib \
+    $(libdir_winnt_x86_msvc)/libvidcap.lib \
+    strmiids.lib comsuppw.lib ksuser.lib $(ldops)
 rcflags := -r $(headers)
 else
 ifeq ($(os), Linux)
