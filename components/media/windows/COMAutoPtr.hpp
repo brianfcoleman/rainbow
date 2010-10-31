@@ -1,7 +1,6 @@
 #ifndef VIDEO_CAPTURE_COM_AUTO_PTR_H
 #define VIDEO_CAPTURE_COM_AUTO_PTR_H
 
-#include <algorithm>
 #include <oaidl.h>
 
 namespace VideoCapture {
@@ -19,12 +18,12 @@ template<typename COMInterface> class COMAutoPtr {
   }
 
   COMAutoPtr(COMAutoPtr& comAutoPtr)
-      : m_pCOMInterface(0) {
-    std::swap((*this), comAutoPtr);
+      : m_pCOMInterface(comAutoPtr.forget()) {
+
   }
 
   COMAutoPtr& operator=(COMAutoPtr& comAutoPtr) {
-    std::swap((*this), comAutoPtr);
+    m_pCOMInterface = comAutoPtr.forget();
     return (*this);
   }
 
@@ -40,6 +39,12 @@ template<typename COMInterface> class COMAutoPtr {
       return 0;
     }
     return m_pCOMInterface;
+  }
+
+  COMInterface* forget() {
+    COMInterface* pCOMInterface = m_pCOMInterface;
+    m_pCOMInterface = 0;
+    return pCOMInterface;
   }
 
   bool isInitialized() const {

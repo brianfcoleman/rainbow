@@ -10,12 +10,12 @@ class RGBVideoFormat {
   RGBVideoFormat();
   explicit RGBVideoFormat(const VideoFormat& videoFormat);
   RGBVideoFormat(
-      const PRInt32 id,
+      const PRUint32 id,
       const IntegerSize sizePixels,
       const PRInt32 angleRotationDegrees,
       const RGBFormat rgbFormat);
   bool isInitialized() const;
-  PRInt32 id() const;
+  PRUint32 id() const;
   IntegerSize sizePixels() const;
   PRInt32 angleRotationDegrees() const;
   PRInt32 bitsPerPixel() const;
@@ -28,11 +28,23 @@ class RGBVideoFormat {
  private:
   bool initialize();
   bool m_isInitialized;
-  PRInt32 m_id;
+  PRUint32 m_id;
   IntegerSize m_sizePixels;
   PRInt32 m_angleRotationDegrees;
   RGBFormat m_rgbFormat;
 };
+
+bool operator==(const RGBVideoFormat& lhs, const RGBVideoFormat& rhs);
+
+bool operator==(const RGBVideoFormat& lhs, const VideoFormat& rhs);
+
+bool operator==(const VideoFormat& lhs, const RGBVideoFormat& rhs);
+
+bool operator!=(const RGBVideoFormat& lhs, const RGBVideoFormat& rhs);
+
+bool operator!=(const RGBVideoFormat& lhs, const VideoFormat& rhs);
+
+bool operator!=(const VideoFormat& lhs, const RGBVideoFormat& rhs);
 
 } // VideoCapture
 

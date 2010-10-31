@@ -1,7 +1,6 @@
 #ifndef VIDEO_CAPTURE_TYPE_ATTRIBUTE_AUTO_PTR_H
 #define VIDEO_CAPTURE_TYPE_ATTRIBUTE_AUTO_PTR_H
 
-#include <algorithm>
 #include "comdef.h"
 #include "comdefsp.h"
 
@@ -13,7 +12,7 @@ class TypeAttributeAutoPtr {
   TypeAttributeAutoPtr(const ITypeInfoPtr& typeInfo);
   TypeAttributeAutoPtr(TypeAttributeAutoPtr& typeAttributeAutoPtr);
   TypeAttributeAutoPtr& operator=(TypeAttributeAutoPtr& typeAttributeAutoPtr) {
-    std::swap((*this), typeAttributeAutoPtr);
+    swap(typeAttributeAutoPtr);
     return (*this);
   }
   ~TypeAttributeAutoPtr();
@@ -23,6 +22,7 @@ class TypeAttributeAutoPtr {
     return isInitialized();
   }
  private:
+  void swap(TypeAttributeAutoPtr& typeAttributeAutoPtr);
   void initialize();
   ITypeInfoPtr m_typeInfo;
   TYPEATTR* m_pTypeAttribute;

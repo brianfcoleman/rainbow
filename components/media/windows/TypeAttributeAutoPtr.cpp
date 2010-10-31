@@ -15,7 +15,7 @@ TypeAttributeAutoPtr::TypeAttributeAutoPtr(const ITypeInfoPtr& typeInfo)
 TypeAttributeAutoPtr::TypeAttributeAutoPtr(
     TypeAttributeAutoPtr& typeAttributeAutoPtr)
     : m_pTypeAttribute(0) {
-  std::swap((*this), typeAttributeAutoPtr);
+  swap(typeAttributeAutoPtr);
 }
 
 TypeAttributeAutoPtr::~TypeAttributeAutoPtr() {
@@ -40,6 +40,12 @@ bool TypeAttributeAutoPtr::isInitialized() const {
     return false;
   }
   return true;
+}
+
+void TypeAttributeAutoPtr::swap(TypeAttributeAutoPtr& typeAttributeAutoPtr) {
+  TYPEATTR* pTypeAttribute = m_pTypeAttribute;
+  m_pTypeAttribute = typeAttributeAutoPtr.m_pTypeAttribute;
+  typeAttributeAutoPtr.m_pTypeAttribute = pTypeAttribute;
 }
 
 void TypeAttributeAutoPtr::initialize() {

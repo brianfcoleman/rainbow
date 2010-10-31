@@ -1,12 +1,8 @@
 #include "VideoCaptureDeviceImpl.hpp"
 #include "VideoFormatImpl.hpp"
-#include "comutil.h"
 #include "IdUtilities.hpp"
 
 namespace VideoCapture {
-
-static RGBVideoFormat firstVideoFormatFromList(
-    std::list<RGBVideoFormat> videoFormatList);
 
 const std::wstring VideoCaptureDeviceImpl::s_kFriendlyName(L"FriendlyName");
 const std::wstring VideoCaptureDeviceImpl::s_kNameCaptureFilter(
@@ -20,23 +16,38 @@ const double VideoCaptureDeviceImpl::s_kOneSecondNs = 1.0e9;
 
 VideoCaptureDeviceImpl::VideoCaptureDeviceImpl(
     const QeditTypeLibrary& qeditTypeLibrary,
-    const IMonikerPtr& pMoniker)
+    COMAutoPtr<IMoniker>& pMoniker)
     : Uncopyable(),
       m_isInitialized(false),
       m_name(s_kEmptyString),
       m_IID_ISampleGrabber(qeditTypeLibrary.IID_ISampleGrabber()),
       m_IID_ISampleGrabberCB(qeditTypeLibrary.IID_ISampleGrabberCB()),
       m_pMoniker(pMoniker),
+      m_pFilterGraph(createInstanceCOMInterface<IFilterGraph2>(
+          CLSID_FilterGraph,
+          IID_IFilterGraph2)),
+      m_pCaptureGraphBuilder(createInstanceCOMInterface<ICaptureGraphBuilder2>(
+          CLSID_CaptureGraphBuilder2,
+          IID_ICaptureGraphBuilder2)),
       m_pSampleGrabberFilter(createInstanceCOMInterface<IBaseFilter>(
           qeditTypeLibrary.CLSID_SampleGrabber(),
           IID_IBaseFilter)),
+      m_pNullRendererFilter(createInstanceCOMInterface<IBaseFilter>(
+          qeditTypeLibrary.CLSID_NullRenderer(),
+          IID_IBaseFilter)),
       m_currentVideoFormatId(kInvalidId) {
   m_isInitialized = initialize(qeditTypeLibrary);
-  RGBVideoFormat videoFormat(firstVideoFormatFromList(videoFormatList()));
-  if (!videoFormat) {
+  nsTArray<RGBVideoFormat> rgbVideoFormatList(videoFormatList());
+  if (rgbVideoFormatList.IsEmpty()) {
+    m_isInitialized = false;
     return;
   }
-  m_isInitialized = setCurrentVideoFormat(videoFormat);
+  RGBVideoFormat rgbVideoFormat(rgbVideoFormatList[0]);
+  if (!rgbVideoFormat) {
+    m_isInitialized = false;
+    return;
+  }
+  m_isInitialized = setCurrentVideoFormat(rgbVideoFormat);
 }
 
 VideoCaptureDeviceImpl::~VideoCaptureDeviceImpl() {
@@ -45,15 +56,9 @@ VideoCaptureDeviceImpl::~VideoCaptureDeviceImpl() {
 
 bool VideoCaptureDeviceImpl::initialize(
     const QeditTypeLibrary& qeditTypeLibrary) {
-  m_pFilterGraph.CreateInstance(CLSID_FilterGraph, 0, CLSCTX_INPROC_SERVER);
-  m_pCaptureGraphBuilder.CreateInstance(
-      CLSID_CaptureGraphBuilder2,
-      0,
-      CLSCTX_INPROC_SERVER);
-  m_pNullRendererFilter.CreateInstance(
-      qeditTypeLibrary.CLSID_NullRenderer(),
-      0,
-      CLSCTX_INPROC_SERVER);
+  if (!qeditTypeLibrary) {
+    return false;
+  }
 
   if (!initName()) {
     return false;
@@ -63,7 +68,7 @@ bool VideoCaptureDeviceImpl::initialize(
     return false;
   }
 
-  if (!initVideoFormatMap()) {
+  if (!initVideoFormatList()) {
     return false;
   }
 
@@ -79,36 +84,38 @@ bool VideoCaptureDeviceImpl::initName() {
   if (FAILED(result)) {
     return false;
   }
-  IBindCtxPtr bindContextPtr(pBindContext);
+  COMAutoPtr<IBindCtx> bindContextPtr(pBindContext);
   if (!bindContextPtr) {
     return false;
   }
 
   IPropertyBag* pPropertyBag = 0;
-  result = m_pMoniker->BindToStorage(
-      bindContextPtr,
+  IMoniker* pMoniker = m_pMoniker.get();
+  result = pMoniker->BindToStorage(
+      bindContextPtr.get(),
       0,
       IID_IPropertyBag,
       reinterpret_cast<void**>(&pPropertyBag));
   if (FAILED(result)) {
     return false;
   }
-  IPropertyBagPtr propertyBagPtr(pPropertyBag);
+  COMAutoPtr<IPropertyBag> propertyBagPtr(pPropertyBag);
   if (!propertyBagPtr) {
     return false;
   }
 
-  _variant_t variant;
-  result = propertyBagPtr->Read(
-      s_kFriendlyName.c_str(),
-      variant.GetAddress(),
-      0);
+  VariantAutoPtr variantPtr;
+  VARIANT* pVariant = variantPtr.get();
+  result = pPropertyBag->Read(s_kFriendlyName.c_str(), pVariant, 0);
   if (FAILED(result)) {
     return false;
   }
 
-  _bstr_t basicString(variant);
-  std::string friendlyName(basicString);
+  const BSTR basicString = pVariant->bstrVal;
+  if (!basicString) {
+    return false;
+  }
+  std::string friendlyName(utf8StringFromBasicString(basicString));
   m_name = friendlyName;
   return true;
 }
@@ -152,7 +159,8 @@ bool VideoCaptureDeviceImpl::initCaptureGraphBuilder() {
     return false;
   }
 
-  HRESULT result = m_pCaptureGraphBuilder->SetFiltergraph(m_pFilterGraph);
+  ICaptureGraphBuilder2* pCaptureGraphBuilder = m_pCaptureGraphBuilder.get();
+  HRESULT result = pCaptureGraphBuilder->SetFiltergraph(m_pFilterGraph.get());
   return SUCCEEDED(result);
 }
 
@@ -161,27 +169,32 @@ bool VideoCaptureDeviceImpl::buildCaptureGraph() {
     return false;
   }
 
+  if (!m_pMoniker) {
+    return false;
+  }
+
   IBindCtx* pBindContext = 0;
   HRESULT result = CreateBindCtx(0, &pBindContext);
   if (FAILED(result)) {
     return false;
   }
-  IBindCtxPtr bindContextPtr(pBindContext);
+  COMAutoPtr<IBindCtx> bindContextPtr(pBindContext);
   m_pBindContext = bindContextPtr;
   if (!m_pBindContext) {
     return false;
   }
 
   IBaseFilter* pCaptureFilter = 0;
-  result = m_pFilterGraph->AddSourceFilterForMoniker(
-      m_pMoniker,
-      m_pBindContext,
+  IFilterGraph2* pFilterGraph = m_pFilterGraph.get();
+  result = pFilterGraph->AddSourceFilterForMoniker(
+      m_pMoniker.get(),
+      m_pBindContext.get(),
       s_kNameCaptureFilter.c_str(),
       &pCaptureFilter);
   if (FAILED(result)) {
     return false;
   }
-  IBaseFilterPtr captureFilterPtr(pCaptureFilter);
+  COMAutoPtr<IBaseFilter> captureFilterPtr(pCaptureFilter);
   m_pCaptureFilter = captureFilterPtr;
   if (!m_pCaptureFilter) {
     return false;
@@ -191,8 +204,8 @@ bool VideoCaptureDeviceImpl::buildCaptureGraph() {
     return false;
   }
 
-  result = m_pFilterGraph->AddFilter(
-      m_pSampleGrabberFilter,
+  result = pFilterGraph->AddFilter(
+      m_pSampleGrabberFilter.get(),
       s_kNameSampleGrabberFilter.c_str());
   if (FAILED(result)) {
     return false;
@@ -202,8 +215,8 @@ bool VideoCaptureDeviceImpl::buildCaptureGraph() {
     return false;
   }
 
-  result = m_pFilterGraph->AddFilter(
-      m_pNullRendererFilter,
+  result = pFilterGraph->AddFilter(
+      m_pNullRendererFilter.get(),
       s_kNameNullRendererFilter.c_str());
   if (FAILED(result)) {
     return false;
@@ -213,12 +226,13 @@ bool VideoCaptureDeviceImpl::buildCaptureGraph() {
     return false;
   }
 
-  result = m_pCaptureGraphBuilder->RenderStream(
+  ICaptureGraphBuilder2* pCaptureGraphBuilder = m_pCaptureGraphBuilder.get();
+  result = pCaptureGraphBuilder->RenderStream(
       &PIN_CATEGORY_CAPTURE,
       &MEDIATYPE_Video,
-      m_pCaptureFilter,
-      m_pSampleGrabberFilter,
-      m_pNullRendererFilter);
+      m_pCaptureFilter.get(),
+      m_pSampleGrabberFilter.get(),
+      m_pNullRendererFilter.get());
   return SUCCEEDED(result);
 }
 
@@ -227,16 +241,17 @@ bool VideoCaptureDeviceImpl::initSampleGrabber() {
     return false;
   }
 
+  IBaseFilter* pSampleGrabberFilter = m_pSampleGrabberFilter.get();
   COMAutoPtr<ISampleGrabber> sampleGrabberPtr(
       queryCOMInterface<IBaseFilter, ISampleGrabber>(
-      m_pSampleGrabberFilter,
+      pSampleGrabberFilter,
       m_IID_ISampleGrabber));
   m_pSampleGrabber = sampleGrabberPtr;
   if (!m_pSampleGrabber) {
     return false;
   }
-  ISampleGrabber* pSampleGrabber = m_pSampleGrabber.get();
 
+  ISampleGrabber* pSampleGrabber = m_pSampleGrabber.get();
   HRESULT result = pSampleGrabber->SetOneShot(FALSE);
   if (FAILED(result)) {
     return false;
@@ -254,8 +269,8 @@ bool VideoCaptureDeviceImpl::initSampleGrabberCallback() {
   if (!m_pSampleGrabber) {
     return false;
   }
-  ISampleGrabber* pSampleGrabber = m_pSampleGrabber.get();
 
+  ISampleGrabber* pSampleGrabber = m_pSampleGrabber.get();
   HRESULT result = pSampleGrabber->SetCallback(
       0,
       VideoCaptureDeviceImpl::s_kUseBufferCB);
@@ -285,10 +300,10 @@ bool VideoCaptureDeviceImpl::initMediaControl() {
     return false;
   }
 
-  IMediaControlPtr mediaControlPtr;
-  m_pFilterGraph.QueryInterface<IMediaControl>(
-      IID_IMediaControl,
-      &mediaControlPtr);
+  COMAutoPtr<IMediaControl> mediaControlPtr(
+      queryCOMInterface<IFilterGraph2, IMediaControl>(
+          m_pFilterGraph.get(),
+          IID_IMediaControl));
   m_pMediaControl = mediaControlPtr;
   if (!m_pMediaControl) {
     return false;
@@ -297,8 +312,7 @@ bool VideoCaptureDeviceImpl::initMediaControl() {
   return true;
 }
 
-bool VideoCaptureDeviceImpl::initVideoControl()
-{
+bool VideoCaptureDeviceImpl::initVideoControl() {
   if (!m_pCaptureGraphBuilder) {
     return false;
   }
@@ -308,16 +322,17 @@ bool VideoCaptureDeviceImpl::initVideoControl()
   }
 
   IAMVideoControl* pVideoControl = 0;
-  HRESULT result = m_pCaptureGraphBuilder->FindInterface(
+  ICaptureGraphBuilder2* pCaptureGraphBuilder = m_pCaptureGraphBuilder.get();
+  HRESULT result = pCaptureGraphBuilder->FindInterface(
       &PIN_CATEGORY_CAPTURE,
       0,
-      m_pCaptureFilter,
+      m_pCaptureFilter.get(),
       IID_IAMVideoControl,
       reinterpret_cast<void**>(&pVideoControl));
   if (FAILED(result)) {
     return false;
   }
-  IAMVideoControlPtr videoControlPtr(pVideoControl);
+  COMAutoPtr<IAMVideoControl> videoControlPtr(pVideoControl);
   m_pVideoControl = videoControlPtr;
   if (!m_pVideoControl) {
     return false;
@@ -326,15 +341,19 @@ bool VideoCaptureDeviceImpl::initVideoControl()
   return true;
 }
 
-bool VideoCaptureDeviceImpl::initCapturePin()
-{
+bool VideoCaptureDeviceImpl::initCapturePin() {
   if (!m_pCaptureGraphBuilder) {
     return false;
   }
 
+  if (!m_pCaptureFilter) {
+    return false;
+  }
+
   IPin* pCapturePin = 0;
-  HRESULT result = m_pCaptureGraphBuilder->FindPin(
-      m_pCaptureFilter,
+  ICaptureGraphBuilder2* pCaptureGraphBuilder = m_pCaptureGraphBuilder.get();
+  HRESULT result = pCaptureGraphBuilder->FindPin(
+      m_pCaptureFilter.get(),
       PINDIR_OUTPUT,
       &PIN_CATEGORY_CAPTURE,
       &MEDIATYPE_Video,
@@ -344,7 +363,7 @@ bool VideoCaptureDeviceImpl::initCapturePin()
   if (FAILED(result)) {
     return false;
   }
-  IPinPtr capturePinPtr(pCapturePin);
+  COMAutoPtr<IPin> capturePinPtr(pCapturePin);
   m_pCapturePin = capturePinPtr;
   if (!m_pCapturePin) {
     return false;
@@ -363,16 +382,17 @@ bool VideoCaptureDeviceImpl::initStreamConfig() {
   }
 
   IAMStreamConfig* pStreamConfig = 0;
-  HRESULT result = m_pCaptureGraphBuilder->FindInterface(
+  ICaptureGraphBuilder2* pCaptureGraphBuilder = m_pCaptureGraphBuilder.get();
+  HRESULT result = pCaptureGraphBuilder->FindInterface(
       &PIN_CATEGORY_CAPTURE,
       0,
-      m_pCaptureFilter,
+      m_pCaptureFilter.get(),
       IID_IAMStreamConfig,
       reinterpret_cast<void**>(&pStreamConfig));
   if (FAILED(result)) {
     return false;
   }
-  IAMStreamConfigPtr streamConfigPtr(pStreamConfig);
+  COMAutoPtr<IAMStreamConfig> streamConfigPtr(pStreamConfig);
   m_pStreamConfig = streamConfigPtr;
   if (!m_pStreamConfig) {
     return false;
@@ -381,14 +401,15 @@ bool VideoCaptureDeviceImpl::initStreamConfig() {
   return true;
 }
 
-bool VideoCaptureDeviceImpl::initVideoFormatMap() {
+bool VideoCaptureDeviceImpl::initVideoFormatList() {
   if (!m_pStreamConfig) {
     return false;
   }
 
   int countCapabilities = 0;
   int sizeBytes = 0;
-  HRESULT result = m_pStreamConfig->GetNumberOfCapabilities(
+  IAMStreamConfig* pStreamConfig = m_pStreamConfig.get();
+  HRESULT result = pStreamConfig->GetNumberOfCapabilities(
       &countCapabilities,
       &sizeBytes);
   if (FAILED(result)) {
@@ -400,21 +421,34 @@ bool VideoCaptureDeviceImpl::initVideoFormatMap() {
   }
 
   for (PRInt32 index = 0, id = 0; index < countCapabilities; ++index) {
-    VideoFormat videoFormat(
-        new VideoFormatImpl(m_pStreamConfig, index, id));
+    VideoFormatImpl* pVideoFormatImpl = new VideoFormatImpl(
+        pStreamConfig,
+        index,
+        id);
+    if (!pVideoFormatImpl) {
+      continue;
+    }
+    if (!m_videoFormatImplList.AppendElement(pVideoFormatImpl)) {
+      nsAutoPtr<VideoFormatImpl> videoFormatImplPtr(pVideoFormatImpl);
+      continue;
+    }
+    if (!pVideoFormatImpl->isInitialized()) {
+      continue;
+    }
+    if (!pVideoFormatImpl->isRGBFormat()) {
+      continue;
+    }
+    VideoFormat videoFormat(pVideoFormatImpl);
     if (!videoFormat) {
       continue;
     }
-    VideoFormatImpl* pVideoFormat = videoFormat.get();
-    if (!pVideoFormat->isRGBFormat()) {
+    if (!m_videoFormatList.InsertElementAt(id, videoFormat)) {
       continue;
     }
-
-    m_videoFormatsById[videoFormat.id()] = videoFormat;
     ++id;
   }
 
-  return (!m_videoFormatsById.empty());
+  return (!m_videoFormatList.IsEmpty());
 }
 
 bool VideoCaptureDeviceImpl::isInitialized() const {
@@ -430,10 +464,13 @@ bool VideoCaptureDeviceImpl::addOnNewVideoFrameCallback(
   if (!pCallback) {
     return false;
   }
-  std::pair<std::set<ByteBufferCallback*>::iterator, bool> resultPair(
-      m_byteBufferCallbackSet.insert(pCallback));
-  bool isInserted = resultPair.second;
-  return isInserted;
+  if (m_byteBufferCallbackSet.Contains(pCallback)) {
+    return false;
+  }
+  if (!m_byteBufferCallbackSet.AppendElement(pCallback)) {
+    return false;
+  }
+  return true;
 }
 
 bool VideoCaptureDeviceImpl::removeOnNewVideoFrameCallback(
@@ -441,11 +478,16 @@ bool VideoCaptureDeviceImpl::removeOnNewVideoFrameCallback(
   if (!pCallback) {
     return false;
   }
-  if (m_byteBufferCallbackSet.empty()) {
+  if (m_byteBufferCallbackSet.IsEmpty()) {
     return false;
   }
-  PRInt32 countRemoved = m_byteBufferCallbackSet.erase(pCallback);
-  return (countRemoved > 0);
+  if (!m_byteBufferCallbackSet.Contains(pCallback)) {
+    return false;
+  }
+  if (!m_byteBufferCallbackSet.RemoveElement(pCallback)) {
+    return false;
+  }
+  return true;
 }
 
 bool VideoCaptureDeviceImpl::startCapturing() {
@@ -461,7 +503,8 @@ bool VideoCaptureDeviceImpl::startCapturing() {
     return false;
   }
 
-  HRESULT result = m_pMediaControl->Run();
+  IMediaControl* pMediaControl = m_pMediaControl.get();
+  HRESULT result = pMediaControl->Run();
 
   return SUCCEEDED(result);
 }
@@ -471,8 +514,8 @@ bool VideoCaptureDeviceImpl::stopCapturing() {
     return true;
   }
 
-  HRESULT result;
-  result = m_pMediaControl->Stop();
+  IMediaControl* pMediaControl = m_pMediaControl.get();
+  HRESULT result = pMediaControl->Stop();
   return SUCCEEDED(result);
 }
 
@@ -490,8 +533,9 @@ double VideoCaptureDeviceImpl::countFramesCapturedPerSecond() const {
   }
 
   PRInt64 framePeriod = 0;
-  HRESULT result = m_pVideoControl->GetCurrentActualFrameRate(
-      m_pCapturePin,
+  IAMVideoControl* pVideoControl = m_pVideoControl.get();
+  HRESULT result = pVideoControl->GetCurrentActualFrameRate(
+      m_pCapturePin.get(),
       &framePeriod);
   if (FAILED(result)) {
     return 0;
@@ -504,36 +548,25 @@ double VideoCaptureDeviceImpl::countFramesCapturedPerSecond() const {
   return frameRate;
 }
 
-std::list<RGBVideoFormat> VideoCaptureDeviceImpl::videoFormatList() const {
+nsTArray<RGBVideoFormat> VideoCaptureDeviceImpl::videoFormatList() const {
   if (!isInitialized()) {
-    std::list<RGBVideoFormat> emptyList;
+    nsTArray<RGBVideoFormat> emptyList;
     return emptyList;
   }
 
-  std::list<RGBVideoFormat> rgbVideoFormatList;
-  for (std::map<PRInt32, VideoFormat>::const_iterator iterator(
-           m_videoFormatsById.begin());
-       iterator != m_videoFormatsById.end();
-       ++iterator) {
-    const std::pair<PRInt32, VideoFormat> idVideoFormatPair(*iterator);
-    RGBVideoFormat rgbVideoFormat(rgbVideoFormatFromPair(idVideoFormatPair));
+  nsTArray<RGBVideoFormat> rgbVideoFormatList;
+  for (PRUint32 i = 0; i < m_videoFormatList.Length(); ++i) {
+    VideoFormat videoFormat = m_videoFormatList[i];
+    if (!videoFormat) {
+      continue;
+    }
+    RGBVideoFormat rgbVideoFormat(videoFormat);
     if (!rgbVideoFormat) {
       continue;
     }
-    rgbVideoFormatList.push_back(rgbVideoFormat);
+    rgbVideoFormatList.AppendElement(rgbVideoFormat);
   }
   return rgbVideoFormatList;
-}
-
-RGBVideoFormat VideoCaptureDeviceImpl::rgbVideoFormatFromPair(
-    const std::pair<PRInt32, VideoFormat>& idVideoFormatPair) const {
-  const VideoFormat videoFormat(idVideoFormatPair.second);
-  if (!videoFormat) {
-    RGBVideoFormat rgbVideoFormat;
-    return rgbVideoFormat;
-  }
-  RGBVideoFormat rgbVideoFormat(videoFormat);
-  return rgbVideoFormat;
 }
 
 RGBVideoFormat VideoCaptureDeviceImpl::currentVideoFormat() const {
@@ -547,16 +580,23 @@ RGBVideoFormat VideoCaptureDeviceImpl::currentVideoFormat() const {
     return rgbVideoFormat;
   }
 
-  std::map<PRInt32, VideoFormat>::const_iterator iterator(
-      m_videoFormatsById.find(m_currentVideoFormatId));
-  if (iterator == m_videoFormatsById.end()) {
+  if (m_currentVideoFormatId < 0) {
     RGBVideoFormat rgbVideoFormat;
     return rgbVideoFormat;
   }
 
-  const std::pair<PRInt32, VideoFormat> idVideoFormatPair(*iterator);
-  const RGBVideoFormat rgbVideoFormat(
-      rgbVideoFormatFromPair(idVideoFormatPair));
+  if (m_currentVideoFormatId >= m_videoFormatList.Length()) {
+    RGBVideoFormat rgbVideoFormat;
+    return rgbVideoFormat;
+  }
+
+  VideoFormat videoFormat(m_videoFormatList[m_currentVideoFormatId]);
+  if (!videoFormat) {
+    RGBVideoFormat rgbVideoFormat;
+    return rgbVideoFormat;
+  }
+
+  RGBVideoFormat rgbVideoFormat(videoFormat);
   return rgbVideoFormat;
 }
 
@@ -574,41 +614,26 @@ bool VideoCaptureDeviceImpl::setCurrentVideoFormat(
     return false;
   }
 
-  const PRInt32 id = rgbVideoFormat.id();
-  if (!isValidId(id)) {
-    return false;
+  for (PRUint32 i = 0; i < m_videoFormatList.Length(); ++i) {
+    VideoFormat videoFormat(m_videoFormatList[i]);
+    if (!videoFormat) {
+      continue;
+    }
+    if (rgbVideoFormat != videoFormat) {
+      continue;
+    }
+    if (i != videoFormat.id()) {
+      continue;
+    }
+    VideoFormatImpl* pVideoFormatImpl = videoFormat.get();
+    if (!pVideoFormatImpl->setMediaTypeOfStream(m_pStreamConfig.get())) {
+      return false;
+    }
+    m_currentVideoFormatId = videoFormat.id();
+    return true;
   }
 
-  std::map<PRInt32, VideoFormat>::const_iterator iterator(
-      m_videoFormatsById.find(id));
-  if (iterator == m_videoFormatsById.end()) {
-    return false;
-  }
-
-  const std::pair<PRInt32, VideoFormat> idVideoFormatPair(*iterator);
-  const VideoFormat videoFormat(idVideoFormatPair.second);
-  if (!videoFormat) {
-    return false;
-  }
-  VideoFormatImpl* pVideoFormat = videoFormat.get();
-
-  m_currentVideoFormatId = idVideoFormatPair.first;
-
-  if (!pVideoFormat->setMediaTypeOfStream(m_pStreamConfig)) {
-    return false;
-  }
-
-  return true;
-}
-
-static RGBVideoFormat firstVideoFormatFromList(
-    std::list<RGBVideoFormat> videoFormatList) {
-  if (!videoFormatList.size()) {
-    RGBVideoFormat videoFormat;
-    return videoFormat;
-  }
-  RGBVideoFormat videoFormat(videoFormatList.front());
-  return videoFormat;
+  return false;
 }
 
 } // VideoCapture

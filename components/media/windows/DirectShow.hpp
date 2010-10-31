@@ -3,18 +3,13 @@
 
 #include "comdef.h"
 #include "dshow.h"
+#include "BStringUtilities.hpp"
+#include "COMManager.hpp"
 #include "MediaTypeAutoPtr.hpp"
 #include "QeditTypeLibrary.hpp"
+#include "VariantAutoPtr.hpp"
 
 namespace VideoCapture {
-
-_COM_SMARTPTR_TYPEDEF(IAMStreamConfig, __uuidof(IAMStreamConfig));
-_COM_SMARTPTR_TYPEDEF(IFilterGraph2, __uuidof(IFilterGraph2));
-_COM_SMARTPTR_TYPEDEF(ICaptureGraphBuilder2, _uuidof(ICaptureGraphBuilder2));
-_COM_SMARTPTR_TYPEDEF(IBaseFilter, __uuidof(IBaseFilter));
-_COM_SMARTPTR_TYPEDEF(IMediaControl, __uuidof(IMediaControl));
-_COM_SMARTPTR_TYPEDEF(IAMVideoControl, __uuidof(IAMVideoControl));
-_COM_SMARTPTR_TYPEDEF(IPin, __uuidof(IPin));
 
 #undef INTERFACE
 #define INTERFACE ISampleGrabberCB

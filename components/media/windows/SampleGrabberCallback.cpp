@@ -4,7 +4,7 @@ namespace VideoCapture {
 
 SampleGrabberCallback::SampleGrabberCallback(
     const IID& IID_ISampleGrabberCB,
-    const std::set<ByteBufferCallback*>& byteBufferCallbackSet)
+    const nsTArray<ByteBufferCallback*>& byteBufferCallbackSet)
     : m_refCount(1),
       m_IID_ISampleGrabberCB(IID_ISampleGrabberCB),
       m_byteBufferCallbackSet(byteBufferCallbackSet) {
@@ -62,11 +62,15 @@ STDMETHODIMP SampleGrabberCallback::BufferCB(
 
   ByteBuffer buffer(pBuffer, BufferLen);
 
-  for(std::set<ByteBufferCallback*>::iterator iterator(
-          m_byteBufferCallbackSet.begin());
-      iterator != m_byteBufferCallbackSet.end();
-      ++iterator) {
-    ByteBufferCallback* pCallback(*iterator);
+  if (m_byteBufferCallbackSet.IsEmpty()) {
+    return S_OK;
+  }
+
+  for (PRUint32 i = 0; i < m_byteBufferCallbackSet.Length(); ++i) {
+    ByteBufferCallback* pCallback(m_byteBufferCallbackSet[i]);
+    if (!pCallback) {
+      continue;
+    }
     pCallback->onNewByteBuffer(buffer);
   }
 

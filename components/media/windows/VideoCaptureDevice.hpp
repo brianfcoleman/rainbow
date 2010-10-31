@@ -2,7 +2,7 @@
 #define VIDEO_CAPTURE_VIDEO_CAPTURE_DEVICE_H
 
 #include <string>
-#include <list>
+#include "nsTArray.h"
 #include "ByteBufferCallback.hpp"
 #include "RGBVideoFormat.hpp"
 
@@ -21,7 +21,7 @@ class VideoCaptureDevice {
   bool startCapturing();
   bool stopCapturing();
   double countFramesCapturedPerSecond() const;
-  std::list<RGBVideoFormat> videoFormatList() const;
+  nsTArray<RGBVideoFormat> videoFormatList() const;
   RGBVideoFormat currentVideoFormat() const;
   bool setCurrentVideoFormat(const RGBVideoFormat& rgbVideoFormat);
   operator bool() const {

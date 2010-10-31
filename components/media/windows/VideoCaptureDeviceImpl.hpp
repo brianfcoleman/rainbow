@@ -1,11 +1,9 @@
 #ifndef VIDEO_CAPTURE_VIDEO_CAPTURE_DEVICE_IMPL_H
 #define VIDEO_CAPTURE_VIDEO_CAPTURE_DEVICE_IMPL_H
 
-#include <list>
-#include <map>
-#include <set>
 #include <string>
 #include "nsAutoPtr.h"
+#include "nsTArray.h"
 #include "COMAutoPtr.hpp"
 #include "RGBVideoFormat.hpp"
 #include "SampleGrabberCallback.hpp"
@@ -18,7 +16,7 @@ class VideoCaptureDeviceImpl : private Uncopyable {
  public:
   VideoCaptureDeviceImpl(
       const QeditTypeLibrary& qeditTypeLibrary,
-      const IMonikerPtr& pMoniker);
+      COMAutoPtr<IMoniker>& pMoniker);
   ~VideoCaptureDeviceImpl();
   bool isInitialized() const;
   std::string name() const;
@@ -27,7 +25,7 @@ class VideoCaptureDeviceImpl : private Uncopyable {
   bool startCapturing();
   bool stopCapturing();
   double countFramesCapturedPerSecond() const;
-  std::list<RGBVideoFormat> videoFormatList() const;
+  nsTArray<RGBVideoFormat> videoFormatList() const;
   RGBVideoFormat currentVideoFormat() const;
   bool setCurrentVideoFormat(const RGBVideoFormat& rgbVideoFormat);
   operator bool() const {
@@ -52,29 +50,28 @@ class VideoCaptureDeviceImpl : private Uncopyable {
   bool initVideoControl();
   bool initCapturePin();
   bool initStreamConfig();
-  bool initVideoFormatMap();
-  RGBVideoFormat rgbVideoFormatFromPair(
-      const std::pair<PRInt32, VideoFormat>& idVideoFormatPair) const;
+  bool initVideoFormatList();
   bool m_isInitialized;
   std::string m_name;
   IID m_IID_ISampleGrabber;
   IID m_IID_ISampleGrabberCB;
-  IMonikerPtr m_pMoniker;
-  IBindCtxPtr m_pBindContext;
-  IFilterGraph2Ptr m_pFilterGraph;
-  ICaptureGraphBuilder2Ptr m_pCaptureGraphBuilder;
-  IBaseFilterPtr m_pCaptureFilter;
-  IBaseFilterPtr m_pSampleGrabberFilter;
-  IBaseFilterPtr m_pNullRendererFilter;
+  COMAutoPtr<IMoniker> m_pMoniker;
+  COMAutoPtr<IBindCtx> m_pBindContext;
+  COMAutoPtr<IFilterGraph2> m_pFilterGraph;
+  COMAutoPtr<ICaptureGraphBuilder2> m_pCaptureGraphBuilder;
+  COMAutoPtr<IBaseFilter> m_pCaptureFilter;
+  COMAutoPtr<IBaseFilter> m_pSampleGrabberFilter;
+  COMAutoPtr<IBaseFilter> m_pNullRendererFilter;
   COMAutoPtr<ISampleGrabber> m_pSampleGrabber;
-  std::set<ByteBufferCallback*> m_byteBufferCallbackSet;
+  nsTArray<ByteBufferCallback*> m_byteBufferCallbackSet;
   nsAutoPtr<SampleGrabberCallback> m_pSampleGrabberCallback;
-  IMediaControlPtr m_pMediaControl;
-  IAMStreamConfigPtr m_pStreamConfig;
-  IAMVideoControlPtr m_pVideoControl;
-  IPinPtr m_pCapturePin;
-  PRInt32 m_currentVideoFormatId;
-  std::map<PRInt32, VideoFormat> m_videoFormatsById;
+  COMAutoPtr<IMediaControl> m_pMediaControl;
+  COMAutoPtr<IAMStreamConfig> m_pStreamConfig;
+  COMAutoPtr<IAMVideoControl> m_pVideoControl;
+  COMAutoPtr<IPin> m_pCapturePin;
+  PRUint32 m_currentVideoFormatId;
+  nsTArray<nsAutoPtr<VideoFormatImpl>> m_videoFormatImplList;
+  nsTArray<VideoFormat> m_videoFormatList;
 };
 
 } // VideoCapture

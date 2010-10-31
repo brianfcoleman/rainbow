@@ -1,7 +1,7 @@
 #ifndef VIDEO_CAPTURE_SAMPLE_GRABBER_CALLBACK_H
 #define VIDEO_CAPTURE_SAMPLE_GRABBER_CALLBACK_H
 
-#include <set>
+#include "nsTArray.h"
 #include "ByteBufferCallback.hpp"
 #include "DirectShow.hpp"
 #include "Uncopyable.hpp"
@@ -14,7 +14,7 @@ class SampleGrabberCallback
  public:
   SampleGrabberCallback(
       const IID& IID_ISampleGrabberCB,
-      const std::set<ByteBufferCallback*>& byteBufferCallbackSet);
+      const nsTArray<ByteBufferCallback*>& byteBufferCallbackSet);
   STDMETHODIMP_(ULONG) AddRef();
   STDMETHODIMP_(ULONG) Release();
   STDMETHODIMP QueryInterface(REFIID riid, void **ppvObject);
@@ -23,7 +23,7 @@ class SampleGrabberCallback
  private:
   PRInt32 m_refCount;
   IID m_IID_ISampleGrabberCB;
-  std::set<ByteBufferCallback*> m_byteBufferCallbackSet;
+  nsTArray<ByteBufferCallback*> m_byteBufferCallbackSet;
 };
 
 } // VideoCapture

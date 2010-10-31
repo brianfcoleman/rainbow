@@ -4,6 +4,11 @@
 
 namespace VideoCapture {
 
+QeditTypeLibrary::QeditTypeLibrary()
+    : m_pImpl(0) {
+
+}
+
 QeditTypeLibrary::QeditTypeLibrary(QeditTypeLibraryImpl* const pImpl)
     : m_pImpl(pImpl) {
 

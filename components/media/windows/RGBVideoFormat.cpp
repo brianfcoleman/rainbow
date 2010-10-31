@@ -21,7 +21,7 @@ RGBVideoFormat::RGBVideoFormat(const VideoFormat& videoFormat)
 }
 
 RGBVideoFormat::RGBVideoFormat(
-    const PRInt32 id,
+    const PRUint32 id,
     const IntegerSize sizePixels,
     const PRInt32 angleRotationDegrees,
     const RGBFormat rgbFormat)
@@ -53,7 +53,7 @@ bool RGBVideoFormat::isInitialized() const {
   return m_isInitialized;
 }
 
-PRInt32 RGBVideoFormat::id() const {
+PRUint32 RGBVideoFormat::id() const {
   return m_id;
 }
 
@@ -91,6 +91,84 @@ PRInt32 RGBVideoFormat::sizeRowBytes() const {
 
 RGBFormat RGBVideoFormat::rgbFormat() const {
   return m_rgbFormat;
+}
+
+bool operator==(const RGBVideoFormat& lhs, const RGBVideoFormat& rhs) {
+  if (!lhs) {
+    return false;
+  }
+  if (!rhs) {
+    return false;
+  }
+  if (lhs.id() != rhs.id()) {
+    return false;
+  }
+  if (lhs.sizePixels() != rhs.sizePixels()) {
+    return false;
+  }
+  if (lhs.angleRotationDegrees() != rhs.angleRotationDegrees()) {
+    return false;
+  }
+  if (lhs.bitsPerPixel() != rhs.bitsPerPixel()) {
+    return false;
+  }
+  if (lhs.sizeBytes() != rhs.sizeBytes()) {
+    return false;
+  }
+  if (lhs.sizeRowBytes() != rhs.sizeRowBytes()) {
+    return false;
+  }
+  if (lhs.rgbFormat() != rhs.rgbFormat()) {
+    return false;
+  }
+  return true;
+}
+
+bool operator==(const RGBVideoFormat& lhs, const VideoFormat& rhs) {
+  if (!lhs) {
+    return false;
+  }
+  if (!rhs) {
+    return false;
+  }
+  if (lhs.id() != rhs.id()) {
+    return false;
+  }
+  if (lhs.sizePixels() != rhs.sizePixels()) {
+    return false;
+  }
+  if (lhs.angleRotationDegrees() != rhs.angleRotationDegrees()) {
+    return false;
+  }
+  if (lhs.bitsPerPixel() != rhs.bitsPerPixel()) {
+    return false;
+  }
+  if (lhs.sizeBytes() != rhs.sizeBytes()) {
+    return false;
+  }
+  if (lhs.sizeRowBytes() != rhs.sizeRowBytes()) {
+    return false;
+  }
+  if (lhs.rgbFormat() != rhs.rgbFormat()) {
+    return false;
+  }
+  return true;
+}
+
+bool operator==(const VideoFormat& lhs, const RGBVideoFormat& rhs) {
+  return operator==(rhs, lhs);
+}
+
+bool operator!=(const RGBVideoFormat& lhs, const RGBVideoFormat& rhs) {
+  return !operator==(lhs, rhs);
+}
+
+bool operator!=(const RGBVideoFormat& lhs, const VideoFormat& rhs) {
+  return !operator==(lhs, rhs);
+}
+
+bool operator!=(const VideoFormat& lhs, const RGBVideoFormat& rhs) {
+  return !operator==(lhs, rhs);
 }
 
 } // VideoCapture

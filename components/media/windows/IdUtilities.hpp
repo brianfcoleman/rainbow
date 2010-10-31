@@ -5,9 +5,9 @@
 
 namespace VideoCapture {
 
-const PRInt32 kInvalidId = -1;
+const PRUint32 kInvalidId = -1;
 
-bool isValidId(const PRInt32 id);
+bool isValidId(const PRUint32 id);
 
 } // VideoCapture
 

@@ -9,7 +9,8 @@ class QeditTypeLibraryImpl;
 
 class QeditTypeLibrary {
 public:
-  QeditTypeLibrary(QeditTypeLibraryImpl* const pImpl);
+  QeditTypeLibrary();
+  explicit QeditTypeLibrary(QeditTypeLibraryImpl* const pImpl);
   const IID IID_ISampleGrabber() const;
   const IID IID_ISampleGrabberCB() const;
   const CLSID CLSID_SampleGrabber() const;

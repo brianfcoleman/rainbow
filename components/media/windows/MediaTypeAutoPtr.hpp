@@ -1,7 +1,6 @@
 #ifndef VIDEO_CAPTURE_MEDIA_TYPE_AUTO_PTR_H
 #define VIDEO_CAPTURE_MEDIA_TYPE_AUTO_PTR_H
 
-#include <algorithm>
 #include "dshow.h"
 
 namespace VideoCapture {
@@ -12,7 +11,7 @@ class MediaTypeAutoPtr {
   MediaTypeAutoPtr(AM_MEDIA_TYPE* const pMediaType);
   MediaTypeAutoPtr(MediaTypeAutoPtr& mediaTypeAutoPtr);
   MediaTypeAutoPtr& operator=(MediaTypeAutoPtr& mediaTypeAutoPtr) {
-    std::swap((*this), mediaTypeAutoPtr);
+    swap(mediaTypeAutoPtr);
     return (*this);
   }
   ~MediaTypeAutoPtr();
@@ -22,6 +21,7 @@ class MediaTypeAutoPtr {
     return isInitialized();
   }
  private:
+  void swap(MediaTypeAutoPtr& mediaTypeAutoPtr);
   AM_MEDIA_TYPE* m_pMediaType;
 };
 

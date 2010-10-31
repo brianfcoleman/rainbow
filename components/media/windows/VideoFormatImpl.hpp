@@ -11,12 +11,12 @@ class VideoFormatImpl : private Uncopyable {
  public:
   VideoFormatImpl();
   VideoFormatImpl(
-      const IAMStreamConfigPtr& pStreamConfig,
-      const PRInt32 index,
-      const PRInt32 id);
+      IAMStreamConfig* const pStreamConfig,
+      const PRUint32 index,
+      const PRUint32 id);
   bool isInitialized() const;
   bool isRGBFormat() const;
-  PRInt32 id() const;
+  PRUint32 id() const;
   double framesPerSecond() const;
   IntegerSize sizePixels() const;
   PRInt32 angleRotationDegrees() const;
@@ -25,7 +25,7 @@ class VideoFormatImpl : private Uncopyable {
   PRInt32 sizeRowBytes() const;
   RGBFormat rgbFormat() const;
   bool VideoFormatImpl::setMediaTypeOfStream(
-      const IAMStreamConfigPtr& pStreamConfig);
+      IAMStreamConfig* const pStreamConfig);
   operator bool() const {
       return isInitialized();
   }
@@ -33,7 +33,7 @@ class VideoFormatImpl : private Uncopyable {
   MediaTypeAutoPtr m_pMediaType;
   VIDEO_STREAM_CONFIG_CAPS m_streamCapabilities;
   bool m_isInitialized;
-  PRInt32 m_id;
+  PRUint32 m_id;
   double m_framesPerSecond;
   IntegerSize m_sizePixels;
   PRInt32 m_angleRotationDegrees;
@@ -41,8 +41,8 @@ class VideoFormatImpl : private Uncopyable {
   bool m_isUncompressedRGB;
   RGBFormat m_rgbFormat;
   bool initialize(
-      const IAMStreamConfigPtr& pStreamConfig,
-      const PRInt32 index);
+      IAMStreamConfig* const pStreamConfig,
+      const PRUint32 index);
   bool extractData();
   bool isVideoFormat() const;
 };

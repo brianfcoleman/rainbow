@@ -24,7 +24,7 @@ bool VideoFormat::isInitialized() const {
   return true;
 }
 
-PRInt32 VideoFormat::id() const {
+PRUint32 VideoFormat::id() const {
   if (!isInitialized()) {
     return kInvalidId;
   }

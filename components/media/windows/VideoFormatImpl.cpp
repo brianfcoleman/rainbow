@@ -15,9 +15,9 @@ VideoFormatImpl::VideoFormatImpl()
 }
 
 VideoFormatImpl::VideoFormatImpl(
-    const IAMStreamConfigPtr& pStreamConfig,
-    const PRInt32 index,
-    const PRInt32 id)
+    IAMStreamConfig* const pStreamConfig,
+    const PRUint32 index,
+    const PRUint32 id)
     : m_isInitialized(false),
       m_id(id),
       m_framesPerSecond(0),
@@ -77,8 +77,12 @@ bool VideoFormatImpl::isRGBFormat() const {
 }
 
 bool VideoFormatImpl::initialize(
-    const IAMStreamConfigPtr& pStreamConfig,
-    const PRInt32 index) {
+    IAMStreamConfig* const pStreamConfig,
+    const PRUint32 index) {
+  if (!pStreamConfig) {
+    return false;
+  }
+
   if (!isValidId(m_id)) {
     return false;
   }
@@ -149,7 +153,7 @@ bool VideoFormatImpl::extractData() {
   return true;
 }
 
-PRInt32 VideoFormatImpl::id() const {
+PRUint32 VideoFormatImpl::id() const {
   if (!isInitialized()) {
     return kInvalidId;
   }
@@ -207,7 +211,11 @@ RGBFormat VideoFormatImpl::rgbFormat() const {
 }
 
 bool VideoFormatImpl::setMediaTypeOfStream(
-    const IAMStreamConfigPtr& pStreamConfig) {
+    IAMStreamConfig* const pStreamConfig) {
+  if (!pStreamConfig) {
+    return false;
+  }
+
   if (!isInitialized()) {
     return false;
   }

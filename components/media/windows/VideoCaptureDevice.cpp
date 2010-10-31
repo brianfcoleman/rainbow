@@ -23,6 +23,7 @@ bool VideoCaptureDevice::isInitialized() const {
   if (!m_pImpl->isInitialized()) {
     return false;
   }
+  return true;
 }
 
 std::string VideoCaptureDevice::name() const {
@@ -69,9 +70,9 @@ double VideoCaptureDevice::countFramesCapturedPerSecond() const {
   return m_pImpl->countFramesCapturedPerSecond();
 }
 
-std::list<RGBVideoFormat> VideoCaptureDevice::videoFormatList() const {
+nsTArray<RGBVideoFormat> VideoCaptureDevice::videoFormatList() const {
   if (!isInitialized()) {
-    std::list<RGBVideoFormat> emptyList;
+    nsTArray<RGBVideoFormat> emptyList;
     return emptyList;
   }
   return m_pImpl->videoFormatList();

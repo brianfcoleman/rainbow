@@ -12,7 +12,7 @@ class VideoFormat {
   VideoFormat();
   explicit VideoFormat(VideoFormatImpl* const pImpl);
   bool isInitialized() const;
-  PRInt32 id() const;
+  PRUint32 id() const;
   double framesPerSecond() const;
   IntegerSize sizePixels() const;
   PRInt32 angleRotationDegrees() const;
