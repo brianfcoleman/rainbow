@@ -1,4 +1,10 @@
 *.swp
-*.o
-*.dll.manifest
+*.xpi
+components/media/*.dll
+components/media/*.dll.manifest
+components/media/*.exp
+components/media/*.lib
+components/media/*.o
+components/media/windows/*.o
 components/media/IMediaRecorder.h
+components/media/IMediaRecorder.xpt
