@@ -53,9 +53,16 @@ cpp_objects = $(cpp_sources:.cpp=.o)
 # source and path configurations
 idl = IMediaRecorder.idl
 cpp_sources = MediaRecorder.cpp MediaModule.cpp
+ifeq ($(os), WINNT)
+	cpp_sources += $(wildcard ./windows/*.cpp)
+endif
 
 sdkdir ?= ${MOZSDKDIR}
-xpidl = $(sdkdir)/bin/xpidl
+ifeq ($(os), WINNT)
+	xpidl = $(sdkdir)/sdk/bin/xpidl
+else
+	xpidl = $(sdkdir)/bin/xpidl
+endif
 
 # FIXME: we don't actually require this for e.g. clean
 ifeq ($(sdkdir),)
@@ -80,6 +87,10 @@ headers = -I. -I$(sdkdir)/include \
     -I$(sdkdir)/include/nspr \
     -I$(sdkdir)/sdk/include
 
+ifeq ($(os), WINNT)
+	headers += -I./windows
+endif
+
 # libraries
 libdirs := $(sdkdir)/lib $(sdkdir)/bin
 libs := xpcomglue_s xpcom nspr4 mozalloc plds4 plc4
@@ -89,7 +100,7 @@ ifeq ($(os), Darwin)
   libdirs := $(patsubst %,-L%,$(libdirs))
   libs := $(patsubst %,-l%,$(libs))
   headers += -I../../lib/Darwin_i386-gcc3/include
-  
+
   ifeq ($(debug),1)
     cppflags += -g -DDEBUG
   endif
@@ -141,7 +152,7 @@ ifeq ($(os), WINNT)
     -DWIN32=1 -DXP_WIN=1 -DXP_WIN32=1 -DHW_THREADS=1 -DSTDC_HEADERS=1 \
     -DWIN32_LEAN_AND_MEAN=1 -DNO_X11=1 -DHAVE_MMINTRIN_H=1 \
     -DHAVE_OLEACC_IDL=1 -DHAVE_ATLBASE_H=1 -DHAVE_WPCAPI_H=1 -D_X86_=1 \
-    -DD_INO=d_ino -DMOZ_NO_MOZALLOC=1 
+    -DD_INO=d_ino -DMOZ_NO_MOZALLOC=1 -D_HAS_EXCEPTIONS=0 -D_STATIC_CPPLIB
   ldflags += -DLL -NOLOGO -SUBSYSTEM:WINDOWS -NXCOMPAT -SAFESEH \
     -IMPLIB:fake.lib \
     $(libdirs) $(libs) \
@@ -150,14 +161,14 @@ ifeq ($(os), WINNT)
     ../../lib/WINNT_x86-msvc/libtheora.lib \
     ../../lib/WINNT_x86-msvc/portaudio.lib \
     ../../lib/WINNT_x86-msvc/libvidcap.lib \
-    strmiids.lib comsuppw.lib $(ldops) 
+    strmiids.lib comsuppw.lib $(ldops)
 rcflags := -r $(headers)
 else
 ifeq ($(os), Linux)
   libdirs := $(patsubst %,-L%,$(libdirs))
   libs := $(patsubst %,-l%,$(libs))
   headers += -I../../lib/Linux_x86-gcc3/include
-  
+
   ifeq ($(debug),1)
     cppflags += -g -DDEBUG
   endif
@@ -168,7 +179,7 @@ ifeq ($(os), Linux)
     -Wpointer-arith -Woverloaded-virtual -Wsynth \
     -Wno-ctor-dtor-privacy -Wno-non-virtual-dtor -Wcast-align \
     -Wno-long-long -include xpcom-config.h $(headers)
- 
+
   ldflags += -pthread -pipe -m32 \
     -DMOZ_NO_MOZALLOC -DMOZILLA_STRICT_API \
     -Wl,-z,defs \
@@ -193,7 +204,7 @@ all: build
 
 build: $(so_target) $(idl_typelib)
 
-clean: 
+clean:
 	rm -f $(so_target) $(cpp_objects) \
   $(idl_typelib) $(idl_headers) \
 	$(target:=.res) fake.lib fake.exp
