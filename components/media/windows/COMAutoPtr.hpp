@@ -22,6 +22,11 @@ template<typename COMInterface> class COMAutoPtr {
 
   }
 
+  COMAutoPtr& operator=(COMInterface* pCOMInterface) {
+    m_pCOMInterface = pCOMInterface;
+    return (*this);
+  }
+
   COMAutoPtr& operator=(COMAutoPtr& comAutoPtr) {
     m_pCOMInterface = comAutoPtr.forget();
     return (*this);

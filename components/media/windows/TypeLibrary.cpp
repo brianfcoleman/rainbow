@@ -1,74 +1,66 @@
 #include "TypeLibrary.hpp"
-#include "comdef.h"
-#include "comdefsp.h"
 #include "nspr.h"
 #include "nsAutoPtr.h"
+#include "COMAutoPtr.hpp"
 #include "GUIDUtilities.hpp"
 #include "TypeAttributeAutoPtr.hpp"
 
 namespace VideoCapture {
 
-static ITypeLibPtr typeLibSharedPtr(const std::wstring& fileNameTypeLib);
+static COMAutoPtr<ITypeLib> typeLibAutoPtr(const nsAString& fileNameTypeLib);
 
 static GUID guidOfTypeKind(
-    const ITypeLibPtr& typeLib,
-    const std::wstring& nameTypeInfo,
+    ITypeLib* const pTypeLib,
+    const nsAString& nameTypeInfo,
     const TYPEKIND typeKind);
 
 static GUID uniqueGUIDOfTypeKind(
-    const std::vector<ITypeInfoPtr>& typeInfoSharedPtrVector,
+    const nsTArray<ITypeInfo*>& typeInfoPtrArray,
     const TYPEKIND typeKind);
 
-static nsAutoArrayPtr<wchar_t> copyWideCharArrayFromString(
-    const std::wstring& wideCharString);
-
-template<typename TypeKindGUID> bool mapNamesToGUIDs(
-    const ITypeLibPtr& typeLib,
+bool mapNamesToGUIDs(
+    ITypeLib* const pTypeLib,
     const TYPEKIND typeKind,
-    const std::vector<const std::wstring>& names,
-    std::map<const std::wstring, TypeKindGUID>& guidsByName);
+    const nsTArray<nsString>& names,
+    nsTArray<StringGUIDPair>& guidsByName);
 
-template<typename TypeKindGUID> TypeKindGUID findGUIDByName(
-    const std::wstring& name,
-    const std::map<const std::wstring, TypeKindGUID>& guidsByName);
+GUID findGUIDByName(
+    const nsAString& name,
+    const nsTArray<StringGUIDPair>& guidsByName);
 
-static ITypeLibPtr typeLibSharedPtr(const std::wstring& fileNameTypeLib) {
+static COMAutoPtr<ITypeLib> typeLibAutoPtr(const nsAString& fileNameTypeLib) {
   ITypeLib* pTypeLib = 0;
   HRESULT result = LoadTypeLib(
-      static_cast<const OLECHAR FAR*>(fileNameTypeLib.c_str()),
+      static_cast<const OLECHAR FAR*>(fileNameTypeLib.BeginReading()),
       static_cast<ITypeLib FAR* FAR*>(&pTypeLib));
   if (result != S_OK) {
-    ITypeLibPtr typeLibSharedPtr;
-    return typeLibSharedPtr;
+    COMAutoPtr<ITypeLib> typeLibAutoPtr;
+    return typeLibAutoPtr;
   }
-  ITypeLibPtr typeLibSharedPtr(pTypeLib);
-  return typeLibSharedPtr;
+  COMAutoPtr<ITypeLib> typeLibAutoPtr(pTypeLib);
+  return typeLibAutoPtr;
 }
 
 static GUID guidOfTypeKind(
-    const ITypeLibPtr& typeLib,
-    const std::wstring& nameTypeInfo,
+    ITypeLib* const pTypeLib,
+    const nsAString& nameTypeInfo,
     const TYPEKIND typeKind) {
-  if (!typeLib) {
+  if (!pTypeLib) {
     return emptyGUID();
   }
-  nsAutoArrayPtr<wchar_t> wideCharArrayNameTypeInfo(
-      copyWideCharArrayFromString(nameTypeInfo));
-  if (!wideCharArrayNameTypeInfo) {
-    return emptyGUID();
-  }
-  UINT countTypeInfo = typeLib->GetTypeInfoCount();
+  UINT countTypeInfo = pTypeLib->GetTypeInfoCount();
   if (!countTypeInfo) {
     return emptyGUID();
   }
+  nsString copyNameTypeInfo(nameTypeInfo);
   nsAutoArrayPtr<ITypeInfo*> typeInfoPtrArray(
       new ITypeInfo*[countTypeInfo]);
   nsAutoArrayPtr<MEMBERID> memberIdArray(new MEMBERID[countTypeInfo]);
   long hashValue = 0;
   USHORT countFound = countTypeInfo;
   HRESULT result =
-  typeLib->FindName(
-      static_cast<OLECHAR FAR*>(wideCharArrayNameTypeInfo.get()),
+  pTypeLib->FindName(
+      static_cast<OLECHAR FAR*>(copyNameTypeInfo.BeginWriting()),
       hashValue,
       static_cast<ITypeInfo FAR* FAR*>(typeInfoPtrArray.get()),
       static_cast<MEMBERID FAR*>(memberIdArray.get()),
@@ -79,29 +71,28 @@ static GUID guidOfTypeKind(
   if (!countFound) {
     return emptyGUID();
   }
-  std::vector<ITypeInfoPtr> typeInfoSharedPtrVector;
-  for (PRInt32 i = 0; i < countFound; ++i) {
+  nsTArray<COMAutoPtr<ITypeInfo>> typeInfoAutoPtrArray;
+  nsTArray<ITypeInfo*> typeInfoRawPtrArray;
+  for (PRUint32 i = 0; i < countFound; ++i) {
     ITypeInfo** pTypeInfoArray = typeInfoPtrArray.get();
-    ITypeInfoPtr typeInfoSharedPtr(pTypeInfoArray[i]);
-    typeInfoSharedPtrVector.push_back(typeInfoSharedPtr);
+    ITypeInfo* pTypeInfo = pTypeInfoArray[i];
+    typeInfoAutoPtrArray.AppendElement(pTypeInfo);
+    typeInfoRawPtrArray.AppendElement(pTypeInfo);
   }
-  return uniqueGUIDOfTypeKind(typeInfoSharedPtrVector, typeKind);
+  return uniqueGUIDOfTypeKind(typeInfoRawPtrArray, typeKind);
 }
 
 static GUID uniqueGUIDOfTypeKind(
-    const std::vector<ITypeInfoPtr>& typeInfoSharedPtrVector,
+    const nsTArray<ITypeInfo*>& typeInfoPtrArray,
     const TYPEKIND typeKind) {
-  if (!typeInfoSharedPtrVector.size()) {
+  if (typeInfoPtrArray.IsEmpty()) {
     return emptyGUID();
   }
   PRInt32 countGUIDsOfTypeKind = 0;
   TypeAttributeAutoPtr typeAttributeOfTypeKind;
-  for (std::vector<ITypeInfoPtr>::const_iterator
-           iterator(typeInfoSharedPtrVector.begin());
-       iterator != typeInfoSharedPtrVector.end();
-       ++iterator) {
-    ITypeInfoPtr typeInfo(*iterator);
-    TypeAttributeAutoPtr typeAttribute(typeInfo);
+  for (PRUint32 i = 0; i < typeInfoPtrArray.Length(); ++i) {
+    ITypeInfo* pTypeInfo = typeInfoPtrArray[i];
+    TypeAttributeAutoPtr typeAttribute(pTypeInfo);
     if (!typeAttribute) {
       continue;
     }
@@ -126,67 +117,64 @@ static GUID uniqueGUIDOfTypeKind(
   return guid;
 }
 
-static nsAutoArrayPtr<wchar_t> copyWideCharArrayFromString(
-    const std::wstring& wideCharString) {
-  if (!wideCharString.size()) {
-    nsAutoArrayPtr<wchar_t> wideCharSharedArray;
-    return wideCharSharedArray;
-  }
-  PRInt32 sizeWideCharStringWithNulTerminator = wideCharString.size() + 1;
-  nsAutoArrayPtr<wchar_t> wideCharSharedArray(
-      new wchar_t[sizeWideCharStringWithNulTerminator]);
-  if (!wideCharSharedArray) {
-    return wideCharSharedArray;
-  }
-  wcsncpy_s(
-      wideCharSharedArray.get(),
-      sizeWideCharStringWithNulTerminator,
-      wideCharString.c_str(),
-      sizeWideCharStringWithNulTerminator);
-  return wideCharSharedArray;
-}
-
-template<typename TypeKindGUID> bool mapNamesToGUIDs(
-    const ITypeLibPtr& typeLib,
+bool mapNamesToGUIDs(
+    ITypeLib* const pTypeLib,
     const TYPEKIND typeKind,
-    const std::vector<const std::wstring>& names,
-    std::map<const std::wstring, TypeKindGUID>& guidsByName) {
-  if (!typeLib) {
+    const nsTArray<nsString>& names,
+    nsTArray<StringGUIDPair>& guidsByName) {
+  if (!pTypeLib) {
     return false;
   }
-  if (!names.size()) {
+  if (names.IsEmpty()) {
     return false;
   }
-  for(std::vector<const std::wstring>::const_iterator iterator(names.begin());
-      iterator != names.end();
-      ++iterator) {
-    const std::wstring& nameTypeInfo(*iterator);
-    const GUID guid(guidOfTypeKind(typeLib, nameTypeInfo, typeKind));
-    if (isEmptyGUID(guid)) {
-      guidsByName.clear();
+  for (PRUint32 i = 0; i < names.Length(); ++i) {
+    const nsString nameTypeInfo(names[i]);
+    if (nameTypeInfo.IsEmpty()) {
+      guidsByName.Clear();
       return false;
     }
-    guidsByName[nameTypeInfo] = static_cast<TypeKindGUID>(guid);
+    if (nameTypeInfo.IsVoid()) {
+      guidsByName.Clear();
+      return false;
+    }
+    const GUID guid(guidOfTypeKind(pTypeLib, nameTypeInfo, typeKind));
+    if (isEmptyGUID(guid)) {
+      guidsByName.Clear();
+      return false;
+    }
+    StringGUIDPair pair(nameTypeInfo, guid);
+    guidsByName.AppendElement(pair);
   }
   return true;
 }
 
-template<typename TypeKindGUID> TypeKindGUID findGUIDByName(
-    const std::wstring& name,
-    const std::map<const std::wstring, TypeKindGUID>& guidsByName) {
-  std::map<const std::wstring, TypeKindGUID>::const_iterator iterator(
-      guidsByName.find(name));
-  if (iterator == guidsByName.end()) {
+GUID findGUIDByName(
+    const nsAString& name,
+    const nsTArray<StringGUIDPair>& guidsByName) {
+  if (name.IsEmpty()) {
     return emptyGUID();
   }
-  TypeKindGUID guid(iterator->second);
-  return guid;
+  if (name.IsVoid()) {
+    return emptyGUID();
+  }
+  if (guidsByName.IsEmpty()) {
+    return emptyGUID();
+  }
+  for (PRUint32 i = 0; i < guidsByName.Length(); ++i) {
+    StringGUIDPair pair(guidsByName[i]);
+    if (pair != name) {
+      continue;
+    }
+    return pair.guid();
+  }
+  return emptyGUID();
 }
 
 TypeLibrary::TypeLibrary(
-    const std::wstring& typeLibraryName,
-    const std::vector<const std::wstring>& interfaceIdentifierNames,
-    const std::vector<const std::wstring>& classIdentifierNames)
+    const nsAString& typeLibraryName,
+    const nsTArray<nsString>& interfaceIdentifierNames,
+    const nsTArray<nsString>& classIdentifierNames)
     : Uncopyable(),
       m_isInitialized(false) {
   m_isInitialized = initialize(
@@ -200,22 +188,22 @@ TypeLibrary::~TypeLibrary() {
 }
 
 bool TypeLibrary::initialize(
-    const std::wstring& typeLibraryName,
-    const std::vector<const std::wstring>& interfaceIdentifierNames,
-    const std::vector<const std::wstring>& classIdentifierNames) {
-  ITypeLibPtr typeLib = typeLibSharedPtr(typeLibraryName);
+    const nsAString& typeLibraryName,
+    const nsTArray<nsString>& interfaceIdentifierNames,
+    const nsTArray<nsString>& classIdentifierNames) {
+  COMAutoPtr<ITypeLib> typeLib = typeLibAutoPtr(typeLibraryName);
   if (!typeLib) {
     return false;
   }
   if (!mapNamesToGUIDs(
-          typeLib,
+          typeLib.get(),
           TKIND_INTERFACE,
           interfaceIdentifierNames,
           m_interfaceIdentifiersByName)) {
     return false;
   }
   if (!mapNamesToGUIDs(
-          typeLib,
+          typeLib.get(),
           TKIND_COCLASS,
           classIdentifierNames,
           m_classIdentifiersByName)) {
@@ -228,14 +216,14 @@ bool TypeLibrary::isInitialized() const {
   return m_isInitialized;
 }
 
-IID TypeLibrary::interfaceIdByName(const std::wstring& name) const {
+IID TypeLibrary::interfaceIdByName(const nsAString& name) const {
   if (!isInitialized()) {
     return emptyGUID();
   }
   return findGUIDByName(name, m_interfaceIdentifiersByName);
 }
 
-CLSID TypeLibrary::classIdByName(const std::wstring& name) const {
+CLSID TypeLibrary::classIdByName(const nsAString& name) const {
   if (!isInitialized()) {
     return emptyGUID();
   }

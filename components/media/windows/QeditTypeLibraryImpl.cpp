@@ -2,31 +2,35 @@
 
 namespace VideoCapture {
 
-static const std::wstring s_kTypeLibraryName(L"qedit.dll");
+static const nsString s_kTypeLibraryName(NS_LITERAL_STRING("qedit.dll"));
 
-static const std::wstring s_kIID_ISampleGrabberName(L"ISampleGrabber");
+static const nsString s_kIID_ISampleGrabberName(
+    NS_LITERAL_STRING("ISampleGrabber"));
 
-static const std::wstring s_kIID_ISampleGrabberCBName(L"ISampleGrabberCB");
+static const nsString s_kIID_ISampleGrabberCBName(
+    NS_LITERAL_STRING("ISampleGrabberCB"));
 
-static const std::wstring s_kCLSID_SampleGrabberName(L"SampleGrabber");
+static const nsString s_kCLSID_SampleGrabberName(
+    NS_LITERAL_STRING("SampleGrabber"));
 
-static const std::wstring s_kCLSID_NullRendererName(L"NullRenderer");
+static const nsString s_kCLSID_NullRendererName(
+    NS_LITERAL_STRING("NullRenderer"));
 
-static const std::vector<const std::wstring> interfaceIdentifierNames();
+static const nsTArray<nsString> interfaceIdentifierNames();
 
-static const std::vector<const std::wstring> classIdentifierNames();
+static const nsTArray<nsString> classIdentifierNames();
 
-static const std::vector<const std::wstring> interfaceIdentifierNames() {
-  std::vector<const std::wstring> names;
-  names.push_back(s_kIID_ISampleGrabberName);
-  names.push_back(s_kIID_ISampleGrabberCBName);
+static const nsTArray<nsString> interfaceIdentifierNames() {
+  nsTArray<nsString> names;
+  names.AppendElement(s_kIID_ISampleGrabberName);
+  names.AppendElement(s_kIID_ISampleGrabberCBName);
   return names;
 }
 
-static const std::vector<const std::wstring> classIdentifierNames() {
-  std::vector<const std::wstring> names;
-  names.push_back(s_kCLSID_SampleGrabberName);
-  names.push_back(s_kCLSID_NullRendererName);
+static const nsTArray<nsString> classIdentifierNames() {
+  nsTArray<nsString> names;
+  names.AppendElement(s_kCLSID_SampleGrabberName);
+  names.AppendElement(s_kCLSID_NullRendererName);
   return names;
 }
 

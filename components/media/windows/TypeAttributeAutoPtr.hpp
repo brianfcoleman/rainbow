@@ -1,15 +1,14 @@
 #ifndef VIDEO_CAPTURE_TYPE_ATTRIBUTE_AUTO_PTR_H
 #define VIDEO_CAPTURE_TYPE_ATTRIBUTE_AUTO_PTR_H
 
-#include "comdef.h"
-#include "comdefsp.h"
+#include "oaidl.h"
 
 namespace VideoCapture {
 
 class TypeAttributeAutoPtr {
  public:
   TypeAttributeAutoPtr();
-  TypeAttributeAutoPtr(const ITypeInfoPtr& typeInfo);
+  TypeAttributeAutoPtr(ITypeInfo* const pTypeInfo);
   TypeAttributeAutoPtr(TypeAttributeAutoPtr& typeAttributeAutoPtr);
   TypeAttributeAutoPtr& operator=(TypeAttributeAutoPtr& typeAttributeAutoPtr) {
     swap(typeAttributeAutoPtr);
@@ -24,7 +23,7 @@ class TypeAttributeAutoPtr {
  private:
   void swap(TypeAttributeAutoPtr& typeAttributeAutoPtr);
   void initialize();
-  ITypeInfoPtr m_typeInfo;
+  ITypeInfo* m_pTypeInfo;
   TYPEATTR* m_pTypeAttribute;
 };
 

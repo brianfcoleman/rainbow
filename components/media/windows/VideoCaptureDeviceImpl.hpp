@@ -1,8 +1,8 @@
 #ifndef VIDEO_CAPTURE_VIDEO_CAPTURE_DEVICE_IMPL_H
 #define VIDEO_CAPTURE_VIDEO_CAPTURE_DEVICE_IMPL_H
 
-#include <string>
 #include "nsAutoPtr.h"
+#include "nsStringAPI.h"
 #include "nsTArray.h"
 #include "COMAutoPtr.hpp"
 #include "RGBVideoFormat.hpp"
@@ -19,7 +19,7 @@ class VideoCaptureDeviceImpl : private Uncopyable {
       COMAutoPtr<IMoniker>& pMoniker);
   ~VideoCaptureDeviceImpl();
   bool isInitialized() const;
-  std::string name() const;
+  nsString name() const;
   bool addOnNewVideoFrameCallback(ByteBufferCallback* const pCallback);
   bool removeOnNewVideoFrameCallback(ByteBufferCallback* const pCallback);
   bool startCapturing();
@@ -33,11 +33,11 @@ class VideoCaptureDeviceImpl : private Uncopyable {
   }
  private:
   static const PRInt32 s_kUseBufferCB = 1;
-  static const std::wstring s_kFriendlyName;
-  static const std::wstring s_kNameCaptureFilter;
-  static const std::wstring s_kNameSampleGrabberFilter;
-  static const std::wstring s_kNameNullRendererFilter;
-  static const std::string s_kEmptyString;
+  static const nsString s_kFriendlyName;
+  static const nsString s_kNameCaptureFilter;
+  static const nsString s_kNameSampleGrabberFilter;
+  static const nsString s_kNameNullRendererFilter;
+  static const nsString s_kEmptyString;
   static const double s_kOneSecondNs;
   bool initialize(const QeditTypeLibrary& qeditTypeLibrary);
   bool initName();
@@ -52,7 +52,7 @@ class VideoCaptureDeviceImpl : private Uncopyable {
   bool initStreamConfig();
   bool initVideoFormatList();
   bool m_isInitialized;
-  std::string m_name;
+  nsString m_name;
   IID m_IID_ISampleGrabber;
   IID m_IID_ISampleGrabberCB;
   COMAutoPtr<IMoniker> m_pMoniker;

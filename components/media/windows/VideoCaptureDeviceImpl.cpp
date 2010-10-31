@@ -4,14 +4,16 @@
 
 namespace VideoCapture {
 
-const std::wstring VideoCaptureDeviceImpl::s_kFriendlyName(L"FriendlyName");
-const std::wstring VideoCaptureDeviceImpl::s_kNameCaptureFilter(
-    L"Capture Filter");
-const std::wstring VideoCaptureDeviceImpl::s_kNameSampleGrabberFilter(
-    L"Sample Grabber Filter");
-const std::wstring VideoCaptureDeviceImpl::s_kNameNullRendererFilter(
-    L"Null Renderer Filter");
-const std::string VideoCaptureDeviceImpl::s_kEmptyString("");
+const nsString VideoCaptureDeviceImpl::s_kFriendlyName(
+    NS_LITERAL_STRING("FriendlyName"));
+const nsString VideoCaptureDeviceImpl::s_kNameCaptureFilter(
+    NS_LITERAL_STRING("Capture Filter"));
+const nsString VideoCaptureDeviceImpl::s_kNameSampleGrabberFilter(
+    NS_LITERAL_STRING("Sample Grabber Filter"));
+const nsString VideoCaptureDeviceImpl::s_kNameNullRendererFilter(
+    NS_LITERAL_STRING("Null Renderer Filter"));
+const nsString VideoCaptureDeviceImpl::s_kEmptyString(
+    NS_LITERAL_STRING(""));
 const double VideoCaptureDeviceImpl::s_kOneSecondNs = 1.0e9;
 
 VideoCaptureDeviceImpl::VideoCaptureDeviceImpl(
@@ -106,7 +108,7 @@ bool VideoCaptureDeviceImpl::initName() {
 
   VariantAutoPtr variantPtr;
   VARIANT* pVariant = variantPtr.get();
-  result = pPropertyBag->Read(s_kFriendlyName.c_str(), pVariant, 0);
+  result = pPropertyBag->Read(s_kFriendlyName.get(), pVariant, 0);
   if (FAILED(result)) {
     return false;
   }
@@ -115,7 +117,7 @@ bool VideoCaptureDeviceImpl::initName() {
   if (!basicString) {
     return false;
   }
-  std::string friendlyName(utf8StringFromBasicString(basicString));
+  nsString friendlyName(nsAStringFromBasicString(basicString));
   m_name = friendlyName;
   return true;
 }
@@ -189,7 +191,7 @@ bool VideoCaptureDeviceImpl::buildCaptureGraph() {
   result = pFilterGraph->AddSourceFilterForMoniker(
       m_pMoniker.get(),
       m_pBindContext.get(),
-      s_kNameCaptureFilter.c_str(),
+      s_kNameCaptureFilter.get(),
       &pCaptureFilter);
   if (FAILED(result)) {
     return false;
@@ -206,7 +208,7 @@ bool VideoCaptureDeviceImpl::buildCaptureGraph() {
 
   result = pFilterGraph->AddFilter(
       m_pSampleGrabberFilter.get(),
-      s_kNameSampleGrabberFilter.c_str());
+      s_kNameSampleGrabberFilter.get());
   if (FAILED(result)) {
     return false;
   }
@@ -217,7 +219,7 @@ bool VideoCaptureDeviceImpl::buildCaptureGraph() {
 
   result = pFilterGraph->AddFilter(
       m_pNullRendererFilter.get(),
-      s_kNameNullRendererFilter.c_str());
+      s_kNameNullRendererFilter.get());
   if (FAILED(result)) {
     return false;
   }
@@ -455,7 +457,7 @@ bool VideoCaptureDeviceImpl::isInitialized() const {
   return m_isInitialized;
 }
 
-std::string VideoCaptureDeviceImpl::name() const {
+nsString VideoCaptureDeviceImpl::name() const {
   return m_name;
 }
 

@@ -1,13 +1,13 @@
 #ifndef VIDEO_CAPTURE_BSTRING_UTILITIES_H
 #define VIDEO_CAPTURE_BSTRING_UTILITIES_H
 
-#include <string>
 #include "wtypes.h"
 #include "oleauto.h"
+#include "nsStringAPI.h"
 
 namespace VideoCapture {
 
-std::string utf8StringFromBasicString(const BSTR basicString);
+nsString nsAStringFromBasicString(const BSTR basicString);
 
 } // VideoCapture
 

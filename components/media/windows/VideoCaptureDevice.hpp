@@ -1,7 +1,7 @@
 #ifndef VIDEO_CAPTURE_VIDEO_CAPTURE_DEVICE_H
 #define VIDEO_CAPTURE_VIDEO_CAPTURE_DEVICE_H
 
-#include <string>
+#include "nsStringAPI.h"
 #include "nsTArray.h"
 #include "ByteBufferCallback.hpp"
 #include "RGBVideoFormat.hpp"
@@ -15,7 +15,7 @@ class VideoCaptureDevice {
   VideoCaptureDevice();
   explicit VideoCaptureDevice(VideoCaptureDeviceImpl* const pImpl);
   bool isInitialized() const;
-  std::string name() const;
+  nsString name() const;
   bool addOnNewVideoFrameCallback(ByteBufferCallback* const pCallback);
   bool removeOnNewVideoFrameCallback(ByteBufferCallback* const pCallback);
   bool startCapturing();
@@ -28,7 +28,7 @@ class VideoCaptureDevice {
     return isInitialized();
   }
  private:
-  static const std::string s_kEmptyString;
+  static const nsString s_kEmptyString;
   VideoCaptureDeviceImpl* m_pImpl;
 };
 

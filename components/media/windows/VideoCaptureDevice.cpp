@@ -3,7 +3,7 @@
 
 namespace VideoCapture {
 
-const std::string VideoCaptureDevice::s_kEmptyString("");
+const nsString VideoCaptureDevice::s_kEmptyString(NS_LITERAL_STRING(""));
 
 VideoCaptureDevice::VideoCaptureDevice()
     : m_pImpl(0) {
@@ -26,7 +26,7 @@ bool VideoCaptureDevice::isInitialized() const {
   return true;
 }
 
-std::string VideoCaptureDevice::name() const {
+nsString VideoCaptureDevice::name() const {
   if (!isInitialized()) {
     return VideoCaptureDevice::s_kEmptyString;
   }
