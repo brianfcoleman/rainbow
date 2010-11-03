@@ -3,6 +3,14 @@
 
 namespace VideoCapture {
 
+VideoCaptureDeviceManager
+VideoCaptureDeviceManager::createVideoCapptureDeviceManager() {
+  static nsAutoPtr<VideoCaptureDeviceManagerImpl> pImpl(
+      new VideoCaptureDeviceManagerImpl());
+  VideoCaptureDeviceManager videoCaptureDeviceManager(pImpl);
+  return videoCaptureDeviceManager;
+}
+
 VideoCaptureDeviceManager::VideoCaptureDeviceManager() {
 
 }

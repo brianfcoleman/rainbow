@@ -20,8 +20,8 @@ class VideoCaptureDeviceImpl : private Uncopyable {
   ~VideoCaptureDeviceImpl();
   bool isInitialized() const;
   nsString name() const;
-  bool addOnNewVideoFrameCallback(ByteBufferCallback* const pCallback);
-  bool removeOnNewVideoFrameCallback(ByteBufferCallback* const pCallback);
+  bool addOnNewVideoFrameCallback(VideoFrameCallback* const pCallback);
+  bool removeOnNewVideoFrameCallback(VideoFrameCallback* const pCallback);
   bool startCapturing();
   bool stopCapturing();
   double countFramesCapturedPerSecond() const;
@@ -63,7 +63,7 @@ class VideoCaptureDeviceImpl : private Uncopyable {
   COMAutoPtr<IBaseFilter> m_pSampleGrabberFilter;
   COMAutoPtr<IBaseFilter> m_pNullRendererFilter;
   COMAutoPtr<ISampleGrabber> m_pSampleGrabber;
-  nsTArray<ByteBufferCallback*> m_byteBufferCallbackSet;
+  nsTArray<VideoFrameCallback*> m_videoFrameCallbackSet;
   nsAutoPtr<SampleGrabberCallback> m_pSampleGrabberCallback;
   COMAutoPtr<IMediaControl> m_pMediaControl;
   COMAutoPtr<IAMStreamConfig> m_pStreamConfig;

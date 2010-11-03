@@ -39,6 +39,9 @@ VideoCaptureDeviceImpl::VideoCaptureDeviceImpl(
           IID_IBaseFilter)),
       m_currentVideoFormatId(kInvalidId) {
   m_isInitialized = initialize(qeditTypeLibrary);
+  if (!m_isInitialized) {
+    return;
+  }
   nsTArray<RGBVideoFormat> rgbVideoFormatList(videoFormatList());
   if (rgbVideoFormatList.IsEmpty()) {
     m_isInitialized = false;
@@ -280,10 +283,13 @@ bool VideoCaptureDeviceImpl::initSampleGrabberCallback() {
     return false;
   }
 
+  RGBVideoFormat rgbVideoFormat(currentVideoFormat());
+
   nsAutoPtr<SampleGrabberCallback> sampleGrabberCallbackPtr(
       new SampleGrabberCallback(
           m_IID_ISampleGrabberCB,
-          m_byteBufferCallbackSet));
+          rgbVideoFormat,
+          m_videoFrameCallbackSet));
   m_pSampleGrabberCallback = sampleGrabberCallbackPtr;
   SampleGrabberCallback* pSampleGrabberCallback = m_pSampleGrabberCallback.get();
   if (!pSampleGrabberCallback) {
@@ -462,31 +468,31 @@ nsString VideoCaptureDeviceImpl::name() const {
 }
 
 bool VideoCaptureDeviceImpl::addOnNewVideoFrameCallback(
-    ByteBufferCallback* const pCallback) {
+    VideoFrameCallback* const pCallback) {
   if (!pCallback) {
     return false;
   }
-  if (m_byteBufferCallbackSet.Contains(pCallback)) {
+  if (m_videoFrameCallbackSet.Contains(pCallback)) {
     return false;
   }
-  if (!m_byteBufferCallbackSet.AppendElement(pCallback)) {
+  if (!m_videoFrameCallbackSet.AppendElement(pCallback)) {
     return false;
   }
   return true;
 }
 
 bool VideoCaptureDeviceImpl::removeOnNewVideoFrameCallback(
-    ByteBufferCallback* const pCallback) {
+    VideoFrameCallback* const pCallback) {
   if (!pCallback) {
     return false;
   }
-  if (m_byteBufferCallbackSet.IsEmpty()) {
+  if (m_videoFrameCallbackSet.IsEmpty()) {
     return false;
   }
-  if (!m_byteBufferCallbackSet.Contains(pCallback)) {
+  if (!m_videoFrameCallbackSet.Contains(pCallback)) {
     return false;
   }
-  if (!m_byteBufferCallbackSet.RemoveElement(pCallback)) {
+  if (!m_videoFrameCallbackSet.RemoveElement(pCallback)) {
     return false;
   }
   return true;

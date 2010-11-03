@@ -2,18 +2,13 @@
 #define VIDEO_CAPTURE_TYPE_ATTRIBUTE_AUTO_PTR_H
 
 #include "oaidl.h"
+#include "Uncopyable.hpp"
 
 namespace VideoCapture {
 
-class TypeAttributeAutoPtr {
+class TypeAttributeAutoPtr : private Uncopyable {
  public:
-  TypeAttributeAutoPtr();
-  TypeAttributeAutoPtr(ITypeInfo* const pTypeInfo);
-  TypeAttributeAutoPtr(TypeAttributeAutoPtr& typeAttributeAutoPtr);
-  TypeAttributeAutoPtr& operator=(TypeAttributeAutoPtr& typeAttributeAutoPtr) {
-    swap(typeAttributeAutoPtr);
-    return (*this);
-  }
+  explicit TypeAttributeAutoPtr(ITypeInfo* const pTypeInfo);
   ~TypeAttributeAutoPtr();
   TYPEATTR* get() const;
   bool isInitialized() const;
@@ -21,7 +16,6 @@ class TypeAttributeAutoPtr {
     return isInitialized();
   }
  private:
-  void swap(TypeAttributeAutoPtr& typeAttributeAutoPtr);
   void initialize();
   ITypeInfo* m_pTypeInfo;
   TYPEATTR* m_pTypeAttribute;

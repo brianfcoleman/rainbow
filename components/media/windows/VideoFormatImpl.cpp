@@ -96,8 +96,7 @@ bool VideoFormatImpl::initialize(
   if (FAILED(result)) {
     return false;
   }
-  MediaTypeAutoPtr mediaTypeAutoPtr(pMediaType);
-  m_pMediaType = mediaTypeAutoPtr;
+  m_pMediaType = pMediaType;
   if (!m_pMediaType) {
     return false;
   }

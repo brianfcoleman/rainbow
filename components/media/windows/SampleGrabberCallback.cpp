@@ -4,10 +4,12 @@ namespace VideoCapture {
 
 SampleGrabberCallback::SampleGrabberCallback(
     const IID& IID_ISampleGrabberCB,
-    const nsTArray<ByteBufferCallback*>& byteBufferCallbackSet)
+    const RGBVideoFormat& videoFormat,
+    const nsTArray<VideoFrameCallback*>& videoFrameCallbackSet)
     : m_refCount(1),
       m_IID_ISampleGrabberCB(IID_ISampleGrabberCB),
-      m_byteBufferCallbackSet(byteBufferCallbackSet) {
+      m_videoFormat(videoFormat),
+      m_videoFrameCallbackSet(videoFrameCallbackSet) {
 
 }
 
@@ -60,18 +62,22 @@ STDMETHODIMP SampleGrabberCallback::BufferCB(
     return S_FALSE;
   }
 
+  if (!m_videoFormat) {
+    return S_FALSE;
+  }
+
   ByteBuffer buffer(pBuffer, BufferLen);
 
-  if (m_byteBufferCallbackSet.IsEmpty()) {
+  if (m_videoFrameCallbackSet.IsEmpty()) {
     return S_OK;
   }
 
-  for (PRUint32 i = 0; i < m_byteBufferCallbackSet.Length(); ++i) {
-    ByteBufferCallback* pCallback(m_byteBufferCallbackSet[i]);
+  for (PRUint32 i = 0; i < m_videoFrameCallbackSet.Length(); ++i) {
+    VideoFrameCallback* pCallback(m_videoFrameCallbackSet[i]);
     if (!pCallback) {
       continue;
     }
-    pCallback->onNewByteBuffer(buffer);
+    pCallback->onNewVideoFrame(buffer, m_videoFormat);
   }
 
   return S_OK;

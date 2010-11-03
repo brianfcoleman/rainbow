@@ -6,5 +6,8 @@ components/media/*.exp
 components/media/*.lib
 components/media/*.o
 components/media/windows/*.o
+components/media/windows/test/*.exe
+components/media/windows/test/*.exe.manifest
+components/media/windows/test/*.o
 components/media/IMediaRecorder.h
 components/media/IMediaRecorder.xpt

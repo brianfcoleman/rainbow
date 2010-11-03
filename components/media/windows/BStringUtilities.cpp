@@ -1,5 +1,8 @@
 #include "BStringUtilities.hpp"
 #include "nsAutoPtr.h"
+#ifdef VIDEO_CAPTURE_DEBUG
+#include <cstdio>
+#endif
 
 namespace VideoCapture {
 
@@ -14,7 +17,16 @@ nsString nsAStringFromBasicString(const BSTR basicString) {
   if (!countCharsBasicString) {
     return kEmptyString;
   }
+#ifdef VIDEO_CAPTURE_DEBUG
+  printf(
+      "nsAStringFromBasicString countCharsBasicString: %u\n",
+      countCharsBasicString);
+#endif
   nsString string(basicString, countCharsBasicString);
+#ifdef VIDEO_CAPTURE_DEBUG
+  NS_LossyConvertUTF16toASCII_external convertedString(string);
+  printf("nsAStringFromBasicString convertedString: %s\n", convertedString);
+#endif
   return string;
 }
 

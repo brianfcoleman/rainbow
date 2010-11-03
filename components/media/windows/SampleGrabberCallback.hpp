@@ -2,9 +2,9 @@
 #define VIDEO_CAPTURE_SAMPLE_GRABBER_CALLBACK_H
 
 #include "nsTArray.h"
-#include "ByteBufferCallback.hpp"
 #include "DirectShow.hpp"
 #include "Uncopyable.hpp"
+#include "VideoFrameCallback.hpp"
 
 namespace VideoCapture {
 
@@ -14,7 +14,8 @@ class SampleGrabberCallback
  public:
   SampleGrabberCallback(
       const IID& IID_ISampleGrabberCB,
-      const nsTArray<ByteBufferCallback*>& byteBufferCallbackSet);
+      const RGBVideoFormat& videoFormat,
+      const nsTArray<VideoFrameCallback*>& videoFrameCallbackSet);
   STDMETHODIMP_(ULONG) AddRef();
   STDMETHODIMP_(ULONG) Release();
   STDMETHODIMP QueryInterface(REFIID riid, void **ppvObject);
@@ -23,7 +24,8 @@ class SampleGrabberCallback
  private:
   PRInt32 m_refCount;
   IID m_IID_ISampleGrabberCB;
-  nsTArray<ByteBufferCallback*> m_byteBufferCallbackSet;
+  RGBVideoFormat m_videoFormat;
+  nsTArray<VideoFrameCallback*> m_videoFrameCallbackSet;
 };
 
 } // VideoCapture

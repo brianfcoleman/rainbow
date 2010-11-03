@@ -3,7 +3,7 @@
 
 #include "nsStringAPI.h"
 #include "nsTArray.h"
-#include "ByteBufferCallback.hpp"
+#include "VideoFrameCallback.hpp"
 #include "RGBVideoFormat.hpp"
 
 namespace VideoCapture {
@@ -16,8 +16,8 @@ class VideoCaptureDevice {
   explicit VideoCaptureDevice(VideoCaptureDeviceImpl* const pImpl);
   bool isInitialized() const;
   nsString name() const;
-  bool addOnNewVideoFrameCallback(ByteBufferCallback* const pCallback);
-  bool removeOnNewVideoFrameCallback(ByteBufferCallback* const pCallback);
+  bool addOnNewVideoFrameCallback(VideoFrameCallback* const pCallback);
+  bool removeOnNewVideoFrameCallback(VideoFrameCallback* const pCallback);
   bool startCapturing();
   bool stopCapturing();
   double countFramesCapturedPerSecond() const;

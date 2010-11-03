@@ -8,10 +8,9 @@ namespace VideoCapture {
 class MediaTypeAutoPtr {
  public:
   MediaTypeAutoPtr();
-  MediaTypeAutoPtr(AM_MEDIA_TYPE* const pMediaType);
-  MediaTypeAutoPtr(MediaTypeAutoPtr& mediaTypeAutoPtr);
-  MediaTypeAutoPtr& operator=(MediaTypeAutoPtr& mediaTypeAutoPtr) {
-    swap(mediaTypeAutoPtr);
+  explicit MediaTypeAutoPtr(AM_MEDIA_TYPE* const pMediaType);
+  MediaTypeAutoPtr& operator=(AM_MEDIA_TYPE* const pMediaType) {
+    m_pMediaType = pMediaType;
     return (*this);
   }
   ~MediaTypeAutoPtr();
@@ -21,7 +20,6 @@ class MediaTypeAutoPtr {
     return isInitialized();
   }
  private:
-  void swap(MediaTypeAutoPtr& mediaTypeAutoPtr);
   AM_MEDIA_TYPE* m_pMediaType;
 };
 

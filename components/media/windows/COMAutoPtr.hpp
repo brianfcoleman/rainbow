@@ -12,7 +12,7 @@ template<typename COMInterface> class COMAutoPtr {
 
   }
 
-  COMAutoPtr(COMInterface* const pCOMInterface)
+  explicit COMAutoPtr(COMInterface* const pCOMInterface)
       : m_pCOMInterface(pCOMInterface) {
 
   }

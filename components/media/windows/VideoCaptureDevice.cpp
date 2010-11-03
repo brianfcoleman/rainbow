@@ -34,7 +34,7 @@ nsString VideoCaptureDevice::name() const {
 }
 
 bool VideoCaptureDevice::addOnNewVideoFrameCallback(
-    ByteBufferCallback* const pCallback) {
+    VideoFrameCallback* const pCallback) {
   if (!isInitialized()) {
     return false;
   }
@@ -42,7 +42,7 @@ bool VideoCaptureDevice::addOnNewVideoFrameCallback(
 }
 
 bool VideoCaptureDevice::removeOnNewVideoFrameCallback(
-    ByteBufferCallback* const pCallback) {
+    VideoFrameCallback* const pCallback) {
   if (!isInitialized()) {
     return false;
   }

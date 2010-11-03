@@ -16,11 +16,6 @@ MediaTypeAutoPtr::MediaTypeAutoPtr(AM_MEDIA_TYPE* const pMediaType)
 
 }
 
-MediaTypeAutoPtr::MediaTypeAutoPtr(MediaTypeAutoPtr& mediaTypeAutoPtr)
-    : m_pMediaType(0) {
-  swap(mediaTypeAutoPtr);
-}
-
 MediaTypeAutoPtr::~MediaTypeAutoPtr() {
   if (!isInitialized()) {
       return;
@@ -40,12 +35,6 @@ bool MediaTypeAutoPtr::isInitialized() const {
     return false;
   }
   return true;
-}
-
-void MediaTypeAutoPtr::swap(MediaTypeAutoPtr& mediaTypeAutoPtr) {
-  AM_MEDIA_TYPE* pMediaType = m_pMediaType;
-  m_pMediaType = mediaTypeAutoPtr.m_pMediaType;
-  mediaTypeAutoPtr.m_pMediaType = m_pMediaType;
 }
 
 static void DeleteMediaType(AM_MEDIA_TYPE* pMediaType) {

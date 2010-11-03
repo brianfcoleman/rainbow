@@ -2,23 +2,10 @@
 
 namespace VideoCapture {
 
-TypeAttributeAutoPtr::TypeAttributeAutoPtr()
-    : m_pTypeInfo(0),
-      m_pTypeAttribute(0) {
-
-}
-
 TypeAttributeAutoPtr::TypeAttributeAutoPtr(ITypeInfo* const pTypeInfo)
-    : m_pTypeInfo(0),
+    : m_pTypeInfo(pTypeInfo),
       m_pTypeAttribute(0) {
   initialize();
-}
-
-TypeAttributeAutoPtr::TypeAttributeAutoPtr(
-    TypeAttributeAutoPtr& typeAttributeAutoPtr)
-    : m_pTypeInfo(0),
-      m_pTypeAttribute(0) {
-  swap(typeAttributeAutoPtr);
 }
 
 TypeAttributeAutoPtr::~TypeAttributeAutoPtr() {
@@ -43,15 +30,6 @@ bool TypeAttributeAutoPtr::isInitialized() const {
     return false;
   }
   return true;
-}
-
-void TypeAttributeAutoPtr::swap(TypeAttributeAutoPtr& typeAttributeAutoPtr) {
-  ITypeInfo* pTypeInfo = m_pTypeInfo;
-  m_pTypeInfo = typeAttributeAutoPtr.m_pTypeInfo;
-  typeAttributeAutoPtr.m_pTypeInfo = pTypeInfo;
-  TYPEATTR* pTypeAttribute = m_pTypeAttribute;
-  m_pTypeAttribute = typeAttributeAutoPtr.m_pTypeAttribute;
-  typeAttributeAutoPtr.m_pTypeAttribute = pTypeAttribute;
 }
 
 void TypeAttributeAutoPtr::initialize() {

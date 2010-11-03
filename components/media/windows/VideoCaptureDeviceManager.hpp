@@ -9,6 +9,7 @@ class VideoCaptureDeviceManagerImpl;
 
 class VideoCaptureDeviceManager {
  public:
+  static VideoCaptureDeviceManager createVideoCapptureDeviceManager();
   VideoCaptureDeviceManager();
   VideoCaptureDeviceManager(VideoCaptureDeviceManagerImpl* pImpl);
   ~VideoCaptureDeviceManager();

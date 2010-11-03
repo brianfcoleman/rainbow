@@ -4,6 +4,9 @@
 #include "COMAutoPtr.hpp"
 #include "GUIDUtilities.hpp"
 #include "TypeAttributeAutoPtr.hpp"
+#ifdef VIDEO_CAPTURE_DEBUG
+#include <cstdio>
+#endif
 
 namespace VideoCapture {
 
@@ -89,7 +92,7 @@ static GUID uniqueGUIDOfTypeKind(
     return emptyGUID();
   }
   PRInt32 countGUIDsOfTypeKind = 0;
-  TypeAttributeAutoPtr typeAttributeOfTypeKind;
+  GUID uniqueGUID = emptyGUID();
   for (PRUint32 i = 0; i < typeInfoPtrArray.Length(); ++i) {
     ITypeInfo* pTypeInfo = typeInfoPtrArray[i];
     TypeAttributeAutoPtr typeAttribute(pTypeInfo);
@@ -104,17 +107,12 @@ static GUID uniqueGUIDOfTypeKind(
     if (countGUIDsOfTypeKind > 1) {
       return emptyGUID();
     }
-    typeAttributeOfTypeKind = typeAttribute;
+    uniqueGUID = pTypeAttribute->guid;
   }
   if (countGUIDsOfTypeKind != 1) {
     return emptyGUID();
   }
-  if (!typeAttributeOfTypeKind) {
-    return emptyGUID();
-  }
-  TYPEATTR* pTypeAttribute = typeAttributeOfTypeKind.get();
-  GUID guid = pTypeAttribute->guid;
-  return guid;
+  return uniqueGUID;
 }
 
 bool mapNamesToGUIDs(
@@ -138,6 +136,10 @@ bool mapNamesToGUIDs(
       guidsByName.Clear();
       return false;
     }
+#ifdef VIDEO_CAPTURE_DEBUG
+    NS_LossyConvertUTF16toASCII_external convertedString(nameTypeInfo);
+    printf("nameTypeInfo: %s\n", convertedString);
+#endif
     const GUID guid(guidOfTypeKind(pTypeLib, nameTypeInfo, typeKind));
     if (isEmptyGUID(guid)) {
       guidsByName.Clear();
@@ -195,6 +197,9 @@ bool TypeLibrary::initialize(
   if (!typeLib) {
     return false;
   }
+#ifdef VIDEO_CAPTURE_DEBUG
+  printf("TypeLibrary typeLib found\n");
+#endif
   if (!mapNamesToGUIDs(
           typeLib.get(),
           TKIND_INTERFACE,
@@ -202,6 +207,9 @@ bool TypeLibrary::initialize(
           m_interfaceIdentifiersByName)) {
     return false;
   }
+#ifdef VIDEO_CAPTURE_DEBUG
+  printf("TypeLibrary mapped names to IIDs\n");
+#endif
   if (!mapNamesToGUIDs(
           typeLib.get(),
           TKIND_COCLASS,
@@ -209,6 +217,9 @@ bool TypeLibrary::initialize(
           m_classIdentifiersByName)) {
     return false;
   }
+#ifdef VIDEO_CAPTURE_DEBUG
+  printf("TypeLibrary mapped names to CLSIDs\n");
+#endif
   return true;
 }
 
