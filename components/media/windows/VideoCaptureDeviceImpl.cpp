@@ -55,8 +55,7 @@ const double VideoCaptureDeviceImpl::s_kOneSecondNs = 1.0e9;
 VideoCaptureDeviceImpl::VideoCaptureDeviceImpl(
     const QeditTypeLibrary& qeditTypeLibrary,
     COMAutoPtr<IMoniker>& pMoniker)
-    : Uncopyable(),
-      m_isInitialized(false),
+    : m_isInitialized(false),
       m_name(s_kEmptyString),
       m_IID_ISampleGrabber(qeditTypeLibrary.IID_ISampleGrabber()),
       m_IID_ISampleGrabberCB(qeditTypeLibrary.IID_ISampleGrabberCB()),

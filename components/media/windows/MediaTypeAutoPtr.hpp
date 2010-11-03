@@ -38,10 +38,11 @@
 #define VIDEO_CAPTURE_MEDIA_TYPE_AUTO_PTR_H
 
 #include "dshow.h"
+#include "Uncopyable.hpp"
 
 namespace VideoCapture {
 
-class MediaTypeAutoPtr {
+class MediaTypeAutoPtr : private Uncopyable {
  public:
   MediaTypeAutoPtr();
   explicit MediaTypeAutoPtr(AM_MEDIA_TYPE* const pMediaType);

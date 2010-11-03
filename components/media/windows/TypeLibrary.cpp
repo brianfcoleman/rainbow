@@ -213,8 +213,7 @@ TypeLibrary::TypeLibrary(
     const nsAString& typeLibraryName,
     const nsTArray<nsString>& interfaceIdentifierNames,
     const nsTArray<nsString>& classIdentifierNames)
-    : Uncopyable(),
-      m_isInitialized(false) {
+    : m_isInitialized(false) {
   m_isInitialized = initialize(
       typeLibraryName,
       interfaceIdentifierNames,
