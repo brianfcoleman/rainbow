@@ -39,49 +39,36 @@
 
 #include "IMediaRecorder.h"
 
-#ifdef _MSC_VER
-#include "windows.h"
-#endif
-
-#include <time.h>
-#include <stdio.h>
 #include <ogg/ogg.h>
-#include <portaudio.h>
-#include <vidcap/vidcap.h>
 #include <vorbis/vorbisenc.h>
 #include <theora/theoraenc.h>
-#include <vidcap/converters.h>
 
-#include "prmem.h"
-#include "prthread.h"
+#include <prmem.h>
+#include <prthread.h>
 
-#include "nsIPipe.h"
-#include "nsStringAPI.h"
-#include "nsIAsyncInputStream.h"
-#include "nsIAsyncOutputStream.h"
-#include "nsIDOMHTMLInputElement.h"
-#include "nsDirectoryServiceDefs.h"
-#include "nsDirectoryServiceUtils.h"
-#include "nsComponentManagerUtils.h"
-#include "nsIDOMCanvasRenderingContext2D.h"
+#include <nsIPipe.h>
+#include <nsCOMPtr.h>
+#include <nsStringAPI.h>
+#include <nsIFileStreams.h>
+#include <nsIAsyncInputStream.h>
+#include <nsIAsyncOutputStream.h>
+#include <nsComponentManagerUtils.h>
+#include <nsIDOMCanvasRenderingContext2D.h>
+
+/* ifdefs are evil, but I am powerless */
+#ifdef RAINBOW_Mac
+#include "VideoSourceMac.h"
+#endif
+#ifdef RAINBOW_Win
+#include "VideoSourceWin.h"
+#endif
+
+/* We use portaudio for all platforms currently */
+#include "AudioSourcePortaudio.h"
 
 #define MEDIA_RECORDER_CONTRACTID "@labs.mozilla.com/media/recorder;1"
 #define MEDIA_RECORDER_CID { 0xc467b1f4, 0x551c, 0x4e2f, \
                            { 0xa6, 0xba, 0xcb, 0x7d, 0x79, 0x2d, 0x14, 0x52 }}
-
-
-/* TODO: Make these configurable */
-#define FPS_N           12
-#define FPS_D           1
-#define WIDTH           640
-#define HEIGHT          480
-
-#define NUM_CHANNELS    1
-#define FRAMES_BUFFER   1024
-#define SAMPLE          PRInt16
-#define SAMPLE_RATE     22050
-#define SAMPLE_FORMAT   paInt16
-#define SAMPLE_QUALITY  (float)(0.4)
 
 typedef struct {
     ogg_page og;
@@ -92,10 +79,7 @@ typedef struct {
     vorbis_dsp_state vd;
     ogg_stream_state os;
 
-    int fsize;
-    PaStream *stream;
-    PaDeviceIndex source;
-
+    AudioSource *backend;
     nsCOMPtr<nsIAsyncInputStream> aPipeIn;
     nsCOMPtr<nsIAsyncOutputStream> aPipeOut;
 } Audio;
@@ -108,16 +92,17 @@ typedef struct {
     th_enc_ctx *th;
     ogg_stream_state os;
     
-    int fsize;
-    vidcap_sapi *sapi;
-    vidcap_src *source;
-    vidcap_state *state;
-    struct vidcap_src_info *sources;
-
+    VideoSource *backend;
     nsCOMPtr<nsIAsyncInputStream> vPipeIn;
     nsCOMPtr<nsIAsyncOutputStream> vPipeOut;
     nsIDOMCanvasRenderingContext2D *vCanvas;
 } Video;
+
+typedef struct {
+    double qual;
+    PRBool audio, video;
+    PRUint32 fps_n, fps_d, width, height, rate, chan;
+} Properties;
 
 class MediaRecorder : public IMediaRecorder
 {
@@ -130,33 +115,33 @@ public:
     virtual ~MediaRecorder();
     MediaRecorder(){}
 
-private:
-    FILE *outfile;
+protected:
     Audio *aState;
     Video *vState;
 
     PRThread *encoder;
     PRBool a_stp, v_stp;
     PRBool a_rec, v_rec;
+    PRLogModuleInfo *log;
 
     nsresult SetupTheoraBOS();
     nsresult SetupVorbisBOS();
     nsresult SetupTheoraHeaders();
     nsresult SetupVorbisHeaders();
-    nsresult CreateFile(nsIDOMHTMLInputElement *input, nsACString &file);
+
+    nsCOMPtr<nsIOutputStream> pipeOut;
 
     static void Encode(void *data);
+    static void WriteAudio(void *data);
     static MediaRecorder *gMediaRecordingService;
 
-protected:
-    static void WriteAudio(void *data);
-    static int VideoCallback(vidcap_src *src,
-        void *data, struct vidcap_capture_info *video);
-    static int AudioCallback(const void *input,
-        void *output, unsigned long frames,
-        const PaStreamCallbackTimeInfo* time,
-        PaStreamCallbackFlags flags, void *data
-    );
+    void ParseProperties(nsIPropertyBag2 *prop);
+    nsresult Record(nsIDOMCanvasRenderingContext2D *ctx);
+    nsresult MakePipe(nsIAsyncInputStream **in, nsIAsyncOutputStream **out);
+
+private:
+    Properties *params;
+
 };
 
 #endif

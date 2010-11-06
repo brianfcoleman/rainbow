@@ -6,18 +6,21 @@ ifeq ($(sys), Darwin)
   compiler = gcc
   cxx = g++
   so = dylib
+  teh = Mac
 else
 ifeq ($(sys), MINGW32_NT-6.1)
   os = WINNT
   compiler = msvc
   cxx = cl
   so = dll
+  teh = Win
 else
 ifeq ($(sys), Linux)
   os = Linux
   compiler = gcc
   cxx = g++
   so = so
+  teh = Nix
 else
   $(error Sorry, your os is unknown/unsupported: $(sys))
 endif
@@ -48,13 +51,14 @@ endif
 # Target and objects
 target = libmediarecorder
 so_target = $(target:=.$(so))
-cpp_objects = $(cpp_sources:.cpp=.o)
 
 # source and path configurations
 idl = IMediaRecorder.idl
-cpp_sources = MediaRecorder.cpp MediaModule.cpp
+cpp_sources = MediaRecorder.cpp MediaModule.cpp \
+    VideoSource.cpp VideoSource$(teh).cpp \
+    AudioSource.cpp AudioSourcePortaudio.cpp
 ifeq ($(os), WINNT)
-	cpp_sources += $(wildcard ./windows/*.cpp)
+	cpp_sources += $(wildcard ./media/windows/*.cpp)
 endif
 
 sdkdir ?= ${MOZSDKDIR}
@@ -78,6 +82,7 @@ idl_typelib = $(idl:.idl=.xpt)
 cpp_objects = $(cpp_sources:.cpp=.o)
 so_target = $(target:=.$(so))
 
+cppflags = -DRAINBOW_$(teh)
 headers = -I. -I$(sdkdir)/include \
     -I$(sdkdir)/include/system_wrappers \
     -I$(sdkdir)/include/xpcom \
@@ -99,14 +104,14 @@ libs := xpcomglue_s xpcom nspr4 mozalloc plds4 plc4
 ifeq ($(os), Darwin)
   libdirs := $(patsubst %,-L%,$(libdirs))
   libs := $(patsubst %,-l%,$(libs))
-  headers += -I../../lib/Darwin_i386-gcc3/include
+  headers += -I../lib/Darwin_i386-gcc3/include
 
   ifeq ($(debug),1)
     cppflags += -g -DDEBUG
   endif
 
-  cppflags += -c -pipe -Os -arch i386 -dynamiclib -DMOZ_NO_MOZALLOC \
-    -fPIC -fno-rtti -fno-exceptions -fno-strict-aliasing \
+  cppflags += -c -pipe -Os -arch i386 -dynamiclib \
+    -DMOZ_NO_MOZALLOC -fPIC -fno-rtti -fno-exceptions -fno-strict-aliasing \
     -fno-common -fshort-wchar -fpascal-strings -pthread \
     -Wall -Werror -Wconversion -Wpointer-arith \
     -Woverloaded-virtual -Wsynth -Wno-ctor-dtor-privacy \
@@ -115,13 +120,13 @@ ifeq ($(os), Darwin)
   ldflags += -pthread -pipe -bundle -arch i386 \
     -Wl,-executable_path,$(sdkdir)/bin \
     -Wl,-dead_strip \
-    ../../lib/Darwin_i386-gcc3/libogg.a \
-    ../../lib/Darwin_i386-gcc3/libvorbis.a \
-    ../../lib/Darwin_i386-gcc3/libvidcap.a \
-    ../../lib/Darwin_i386-gcc3/libtheora.a \
-    ../../lib/Darwin_i386-gcc3/libtheoraenc.a \
-    ../../lib/Darwin_i386-gcc3/libvorbisenc.a \
-    ../../lib/Darwin_i386-gcc3/libportaudio.a \
+    ../lib/Darwin_i386-gcc3/libogg.a \
+    ../lib/Darwin_i386-gcc3/libvorbis.a \
+    ../lib/Darwin_i386-gcc3/libvidcap.a \
+    ../lib/Darwin_i386-gcc3/libtheora.a \
+    ../lib/Darwin_i386-gcc3/libtheoraenc.a \
+    ../lib/Darwin_i386-gcc3/libvorbisenc.a \
+    ../lib/Darwin_i386-gcc3/libportaudio.a \
     -framework Carbon \
     -framework CoreAudio \
     -framework QuartzCore \
@@ -133,12 +138,12 @@ else
 ifeq ($(os), WINNT)
   libdirs := $(patsubst %,-LIBPATH:%,$(libdirs))
   libs := $(patsubst %,$(sdkdir)/lib/%.lib,$(libs))
-	libdir_winnt_x86_msvc := ../../lib/WINNT_x86-msvc9
-  headers += -I../../lib/WINNT_x86-msvc/include
+	libdir_winnt_x86_msvc := ../lib/WINNT_x86-msvc9
+  headers += -I../lib/WINNT_x86-msvc/include
 
   ifeq ($(debug),1)
     cppflags += -MTd -DDEBUG
-    ldops = msvcrtd.lib \
+    ldops = -DEBUG msvcrtd.lib \
         /NODEFAULTLIB:libcmt /NODEFAULTLIB:msvcrt /NODEFAULTLIB:libcmtd
   else
     cppflags += -MT
@@ -161,20 +166,20 @@ ifeq ($(os), WINNT)
     $(libdir_winnt_x86_msvc)/libvorbis.lib \
 	 	$(libdir_winnt_x86_msvc)/libtheora.lib \
     $(libdir_winnt_x86_msvc)/portaudio.lib \
-    $(libdir_winnt_x86_msvc)/libvidcap.lib \
-    strmiids.lib comsuppw.lib ksuser.lib $(ldops)
-rcflags := -r $(headers)
+    strmiids.lib comsuppw.lib ole32.lib user32.lib $(ldops)
+	rcflags := -r $(headers)
 else
 ifeq ($(os), Linux)
   libdirs := $(patsubst %,-L%,$(libdirs))
   libs := $(patsubst %,-l%,$(libs))
-  headers += -I../../lib/Linux_x86-gcc3/include
+  headers += -I../lib/Linux_x86-gcc3/include
 
   ifeq ($(debug),1)
     cppflags += -g -DDEBUG
   endif
 
-  cppflags += -pipe -Os -shared -fshort-wchar \
+  cppflags += -pipe -Os -shared \
+    -DMOZ_NO_MOZALLOC -DMOZILLA_STRICT_API -fshort-wchar \
     -fPIC -fno-rtti -fno-exceptions -fno-strict-aliasing \
     -fno-common -pthread -Wall -Werror -Wconversion \
     -Wpointer-arith -Woverloaded-virtual -Wsynth \
@@ -182,17 +187,16 @@ ifeq ($(os), Linux)
     -Wno-long-long -include xpcom-config.h $(headers)
 
   ldflags += -pthread -pipe -m32 \
-    -DMOZ_NO_MOZALLOC -DMOZILLA_STRICT_API \
     -Wl,-z,defs \
     -Wl,-rpath-link,$(sdkdir)/bin \
     $(sdkdir)/lib/libxpcomglue_s.a \
     $(libdirs) $(libs) -lrt \
-    ../../lib/Linux_x86-gcc3/libvidcap.a \
-    ../../lib/Linux_x86-gcc3/libportaudio.a \
-    ../../lib/Linux_x86-gcc3/libvorbis.a \
-    ../../lib/Linux_x86-gcc3/libvorbisenc.a \
-    ../../lib/Linux_x86-gcc3/libogg.a \
-    ../../lib/Linux_x86-gcc3/libtheora.a
+    ../lib/Linux_x86-gcc3/libvidcap.a \
+    ../lib/Linux_x86-gcc3/libportaudio.a \
+    ../lib/Linux_x86-gcc3/libvorbis.a \
+    ../lib/Linux_x86-gcc3/libvorbisenc.a \
+    ../lib/Linux_x86-gcc3/libogg.a \
+    ../lib/Linux_x86-gcc3/libtheora.a
 endif
 endif
 endif
@@ -208,7 +212,7 @@ build: $(so_target) $(idl_typelib)
 clean:
 	rm -f $(so_target) $(cpp_objects) \
   $(idl_typelib) $(idl_headers) \
-	$(target:=.res) fake.lib fake.exp
+	$(target:=.res) fake.lib fake.exp $(target).pdb $(target).ilk
 
 # rules to build the c headers and .xpt from idl
 $(idl_headers): $(idl)

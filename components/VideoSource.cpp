@@ -11,10 +11,10 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Video for Jetpack.
+ * The Original Code is Rainbow.
  *
  * The Initial Developer of the Original Code is Mozilla Labs.
- * Portions created by the Initial Developer are Copyright (C) 2009-10
+ * Portions created by the Initial Developer are Copyright (C) 2010
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,15 +34,23 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsIDOMHTMLInputElement.idl"
-#include "nsIDOMCanvasRenderingContext2D.idl"
+#include "VideoSource.h"
 
-[scriptable, uuid(c467b1f4-551c-4e2f-a6ba-cb7d792d1452)]
-interface IMediaRecorder : nsISupports
+VideoSource::VideoSource(int n, int d, int w, int h)
 {
-    ACString start(in boolean audio, in boolean video,
-        in nsIDOMHTMLInputElement input,
-        in nsIDOMCanvasRenderingContext2D ctx);
-    void stop();
-};
+    fps_n = n;
+    fps_d = d;
+    width = w;
+    height = h;
+
+    /* Setup logger */
+    log = PR_NewLogModule("VideoSource");
+}
+
+int
+VideoSource::GetFrameSize()
+{
+    /* RGB32 is 4 bytes per pixel */
+    return width * height * 4;
+}
 
