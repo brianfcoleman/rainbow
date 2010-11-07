@@ -337,11 +337,13 @@ bool VideoCaptureDeviceImpl::initSampleGrabberCallback() {
   if (FAILED(result)) {
     return false;
   }
+  // Swap the SampleGrabberCallback pointers
+  // Get the old SampleGrabberCallback
   pSampleGrabberCallback = m_pSampleGrabberCallback.forget();
-  if (pSampleGrabberCallback) {
-    delete pSampleGrabberCallback;
-  }
+  // Store the new SampleGrabberCallback
   m_pSampleGrabberCallback = sampleGrabberCallbackPtr;
+  // Make sure that the old SampleGrabberCallback is deleted
+  sampleGrabberCallbackPtr = pSampleGrabberCallback;
 
   return true;
 }

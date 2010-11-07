@@ -135,11 +135,13 @@ VideoSourceWin::Start(nsIOutputStream *pipe)
   if (!mCaptureDevice.startCapturing()) {
     return NS_ERROR_FAILURE;
   }
+  // Swap the VideoSourceWinCallback pointers
+  // Get the old VideoSourceWinCallback
   VideoSourceWinCallback* pCB = cb.forget();
-  if (pCB) {
-    delete pCB;
-  }
+  // Store the new VideoSourceWinCallback
   cb = callback;
+  // Make sure that the old VideoSourceWinCallback is deleted
+  callback = pCB;
   return NS_OK;
 }
 
