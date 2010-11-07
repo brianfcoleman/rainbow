@@ -2,7 +2,9 @@
 <head>
     <title>Rainbow!</title>
     <script type="application/javascript;version=1.8">
-        let Me = window.navigator.service.media;
+      let module = {};
+      Components.utils.import("resource://rainbow/content/rainbow.js", module);
+      let Me = new module.Rainbow();
     </script>
 </head>
 <body style="margin:50px 0px;padding:0px;text-align:center;">
@@ -29,7 +31,7 @@
     but.onclick = function() {
         if (Re) {
             // Stop recording
-            Fi = Sr.stop();
+            Fi = Me.stop();
             Re = false;
             but.value = "Start!";
             ctx.drawImage(img, 192, 112);
@@ -42,7 +44,7 @@
             Re = true;
             but.value = "Stop!";
             msg.innerHTML = " ";
-            Sr = Me.record(true, true, fil, ctx);
+            Sr = Me.recordToFile({}, ctx);
         }
     }
 </script>
