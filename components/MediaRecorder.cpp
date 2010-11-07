@@ -228,11 +228,11 @@ MediaRecorder::Encode(void *data)
         }
 
         /* Convert RGB32 to i420 */
-        unsigned char *i420 = (unsigned char *)
-            PR_Calloc(mr->params->width * mr->params->height * 3 / 2, 1);
+        nsAutoArrayPtr<PRUint8> i420(
+            new PRUint8[mr->params->width * mr->params->height * 3 / 2]);
 
         RGB32toI420(mr->params->width, mr->params->height,
-            (const char *)v_frame.get(), (char *)i420);
+            (const char *)v_frame.get(), (char *)i420.get());
 
         /* Convert i420 to YCbCr */
         v_buffer[0].width = mr->params->width;
@@ -247,8 +247,8 @@ MediaRecorder::Encode(void *data)
         v_buffer[2].height = v_buffer[1].height;
         v_buffer[2].stride = v_buffer[1].stride;
 
-        v_buffer[0].data = i420;
-        v_buffer[1].data = i420 + v_buffer[0].width * v_buffer[0].height;
+        v_buffer[0].data = i420.get();
+        v_buffer[1].data = i420.get() + v_buffer[0].width * v_buffer[0].height;
         v_buffer[2].data =
             v_buffer[1].data + v_buffer[0].width * v_buffer[0].height / 4;
 
