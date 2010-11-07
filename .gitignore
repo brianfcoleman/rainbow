@@ -3,8 +3,10 @@
 components/*.dll
 components/*.dll.manifest
 components/*.exp
+components/*.ilk
 components/*.lib
 components/*.o
+components/*.pdb
 components/media/windows/*.o
 components/media/windows/test/*.exe
 components/media/windows/test/*.exe.manifest
