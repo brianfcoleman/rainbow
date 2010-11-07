@@ -58,7 +58,7 @@ cpp_sources = MediaRecorder.cpp MediaModule.cpp \
     VideoSource.cpp VideoSource$(teh).cpp \
     AudioSource.cpp AudioSourcePortaudio.cpp
 ifeq ($(os), WINNT)
-	cpp_sources += $(wildcard ./media/windows/*.cpp)
+	cpp_sources += $(wildcard ./windows/*.cpp)
 endif
 
 sdkdir ?= ${MOZSDKDIR}
@@ -93,7 +93,7 @@ headers = -I. -I$(sdkdir)/include \
     -I$(sdkdir)/sdk/include
 
 ifeq ($(os), WINNT)
-	headers += -I./media/windows
+	headers += -I./windows
 endif
 
 # libraries

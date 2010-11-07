@@ -75,13 +75,14 @@ libs := xpcomglue_s xpcom nspr4 mozalloc plds4 plc4
 ifeq ($(os), WINNT)
   libdirs := $(patsubst %,-LIBPATH:%,$(libdirs))
   libs := $(patsubst %,$(sdkdir)/lib/%.lib,$(libs))
-	libdir_winnt_x86_msvc := ../../lib/WINNT_x86-msvc9
-  headers += -I../../lib/WINNT_x86-msvc/include
+	libdir_winnt_x86_msvc := ../lib/WINNT_x86-msvc9
+  headers += -I../lib/WINNT_x86-msvc/include
 
   ifeq ($(debug),1)
     cppflags += -MTd -DDEBUG
     ldops = msvcrtd.lib \
         /NODEFAULTLIB:libcmt /NODEFAULTLIB:msvcrt /NODEFAULTLIB:libcmtd
+		libdir_winnt_x86_msvc = ../lib/WINNT_x86-msvc9d
   else
     cppflags += -MT
     ldops = msvcrt.lib /NODEFAULTLIB:libcmt
