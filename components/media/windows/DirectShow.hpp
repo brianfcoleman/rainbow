@@ -37,7 +37,6 @@
 #ifndef VIDEOCAPTURE_DIRECT_SHOW_H
 #define VIDEOCAPTURE_DIRECT_SHOW_H
 
-#include "comdef.h"
 #include "dshow.h"
 #include "BStringUtilities.hpp"
 #include "COMManager.hpp"

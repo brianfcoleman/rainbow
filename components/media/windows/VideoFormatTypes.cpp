@@ -44,13 +44,9 @@ static PRInt32 convertBitsToBytes(PRInt32 countBits);
 
 bool isValidRGBFormat(const RGBFormat rgbFormat) {
   switch (rgbFormat) {
-    case kRGB888:
-      return true;
-    case kRGBA8888:
-      return true;
     case kBGR888:
       return true;
-    case kABGR8888:
+    case kBGRA8888:
       return true;
     case kRGBNone:
       return false;
@@ -61,13 +57,9 @@ bool isValidRGBFormat(const RGBFormat rgbFormat) {
 
 PRInt32 bitsPerPixelForRGBFormat(const RGBFormat rgbFormat) {
   switch (rgbFormat) {
-    case kRGB888:
-      return 24;
-    case kRGBA8888:
-      return 32;
     case kBGR888:
       return 24;
-    case kABGR8888:
+    case kBGRA8888:
       return 32;
     case kRGBNone:
       return 0;

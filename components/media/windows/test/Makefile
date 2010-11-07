@@ -98,7 +98,7 @@ ifeq ($(os), WINNT)
     -DD_INO=d_ino -DMOZ_NO_MOZALLOC=1 -DVIDEO_CAPTURE_DEBUG
   ldflags += -NOLOGO -NXCOMPAT -SAFESEH \
     $(libdirs) $(libs) \
-    strmiids.lib advapi32.lib $(ldops)
+    strmiids.lib ole32.lib oleaut32.lib advapi32.lib $(ldops)
 rcflags := -r $(headers)
 endif
 

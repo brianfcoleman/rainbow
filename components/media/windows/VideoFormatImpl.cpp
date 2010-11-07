@@ -182,7 +182,7 @@ bool VideoFormatImpl::extractData() {
   }
 
   if (pMediaType->subtype == MEDIASUBTYPE_RGB32) {
-    m_rgbFormat = kABGR8888;
+    m_rgbFormat = kBGRA8888;
   }
 
   return true;

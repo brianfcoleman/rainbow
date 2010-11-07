@@ -35,6 +35,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "MediaRecorder.h"
+#include "nsThreadUtils.h"
 
 NS_IMPL_ISUPPORTS1(MediaRecorder, IMediaRecorder)
 
@@ -55,7 +56,7 @@ MediaRecorder::GetSingleton()
     return gMediaRecordingService;
 }
 
-/* 
+/*
  * Convert RGB32 to i420. NOTE: size of dest must be >= width * height * 3 / 2
  * Based on formulas found at http://en.wikipedia.org/wiki/YUV  (libvidcap)
  */
@@ -141,11 +142,11 @@ MediaRecorder::WriteAudio(void *data)
                 ret = ogg_stream_pageout(&mr->aState->os, &mr->aState->og);
                 if (ret == 0)
                     break;
-                
+
                 rv = mr->pipeOut->Write(
                     (const char*)mr->aState->og.header,
                     mr->aState->og.header_len, &wr
-                );           
+                );
                 rv = mr->pipeOut->Write(
                     (const char*)mr->aState->og.body,
                     mr->aState->og.body_len, &wr
@@ -171,7 +172,6 @@ MediaRecorder::Encode(void *data)
 
     char *a_frame;
     float **a_buffer;
-    unsigned char *v_frame;
     th_ycbcr_buffer v_buffer;
     MediaRecorder *mr = static_cast<MediaRecorder*>(data);
 
@@ -208,15 +208,14 @@ MediaRecorder::Encode(void *data)
         if (mr->v_rec) {
 
         /* Make sure we get 1 full frame of video */
-        v_frame = (unsigned char *) PR_Calloc(1, v_frame_size);
+        nsAutoArrayPtr<PRUint8> v_frame(new PRUint8[v_frame_size]);
 
         do mr->vState->vPipeIn->Available(&rd);
             while ((rd < (PRUint32)v_frame_size) && !mr->v_stp);
-        rv = mr->vState->vPipeIn->Read((char *)v_frame, v_frame_size, &rd);
+        rv = mr->vState->vPipeIn->Read((char *)v_frame.get(), v_frame_size, &rd);
 
         if (rd == 0) {
             /* EOF. If there's audio we need to finish it. Goto: gasp! */
-            PR_Free(v_frame);
             if (mr->a_rec)
                 goto audio_enc;
             else
@@ -225,7 +224,6 @@ MediaRecorder::Encode(void *data)
             /* Now, we're in a pickle. HOW TO FIXME? */
             PR_LOG(mr->log, PR_LOG_NOTICE,
                 ("only read %u of %d from video pipe\n", rd, v_frame_size));
-            PR_Free(v_frame);
             return;
         }
 
@@ -234,7 +232,7 @@ MediaRecorder::Encode(void *data)
             PR_Calloc(mr->params->width * mr->params->height * 3 / 2, 1);
 
         RGB32toI420(mr->params->width, mr->params->height,
-            (const char *)v_frame, (char *)i420);
+            (const char *)v_frame.get(), (char *)i420);
 
         /* Convert i420 to YCbCr */
         v_buffer[0].width = mr->params->width;
@@ -263,20 +261,25 @@ MediaRecorder::Encode(void *data)
             PR_LOG(mr->log, PR_LOG_NOTICE, ("Could not read packet\n"));
             return;
         }
-        
+
         /* Write to canvas, if needed. Move to another thread? */
         if (mr->vState->vCanvas) {
             /* Looks like libvidcap gives as BGRA but we want RGBA */
-            unsigned char tmp = 0;
+            PRUint8 tmp = 0;
+            PRUint8* pVideoFrameData = v_frame.get();
             for (int j = 0; j < v_frame_size; j += 4) {
-                tmp = v_frame[j+2];
-                v_frame[j+2] = v_frame[j];
-                v_frame[j] = tmp;
+                tmp = pVideoFrameData[j+2];
+                pVideoFrameData[j+2] = pVideoFrameData[j];
+                pVideoFrameData[j] = tmp;
             }
-            rv = mr->vState->vCanvas->PutImageData_explicit(
-                0, 0, mr->params->width, mr->params->height,
-                v_frame, v_frame_size
-            );
+            nsRefPtr<CanvasRenderer> pCanvasRenderer(
+                new CanvasRenderer(
+                    mr->vState->vCanvas,
+                    mr->params->width,
+                    mr->params->height,
+                    v_frame,
+                    v_frame_size));
+            rv = NS_DispatchToMainThread(pCanvasRenderer);
         }
 
         ogg_stream_packetin(&mr->vState->os, &mr->vState->op);
@@ -290,14 +293,13 @@ MediaRecorder::Encode(void *data)
                 mr->vState->og.body_len, &wr
             );
         }
-        PR_Free(v_frame);
 
         }
 
 audio_enc:
-    
+
         if (mr->a_rec) {
-             
+
         /* Make sure we get enough frames in unless we're at the end */
         a_frame = (char *) PR_Calloc(1, a_frame_total);
 
@@ -318,7 +320,7 @@ audio_enc:
             }
             return;
         }
-          
+
         /* Uninterleave samples. Alternatively, have portaudio do this? */
         a_buffer = vorbis_analysis_buffer(&mr->aState->vd, a_frame_total);
         for (i = 0; i < a_frame_len; i++){
@@ -329,7 +331,7 @@ audio_enc:
                             32768.f;
             }
         }
-        
+
         /* Tell libvorbis to do its thing */
         vorbis_analysis_wrote(&mr->aState->vd, a_frame_len);
         MediaRecorder::WriteAudio(data);
@@ -355,7 +357,7 @@ MediaRecorder::Init()
     params = (Properties *)PR_Calloc(1, sizeof(Properties));
     aState = (Audio *)PR_Calloc(1, sizeof(Audio));
     vState = (Video *)PR_Calloc(1, sizeof(Video));
-    return NS_OK;   
+    return NS_OK;
 }
 
 MediaRecorder::~MediaRecorder()
@@ -379,7 +381,7 @@ MediaRecorder::SetupTheoraBOS()
         PR_LOG(log, PR_LOG_NOTICE, ("Failed ogg_stream_init\n"));
         return NS_ERROR_FAILURE;
     }
-    
+
     th_info_init(&vState->ti);
     /* Must be multiples of 16 */
     vState->ti.frame_width = ((params->width + 15) >> 4) << 4;
@@ -388,7 +390,7 @@ MediaRecorder::SetupTheoraBOS()
     vState->ti.pic_height = params->height;
     vState->ti.pic_x = 0;
     vState->ti.pic_y = 0;
-    
+
     /* Too fast? Why? */
     vState->ti.fps_numerator = params->fps_n;
     vState->ti.fps_denominator = params->fps_d;
@@ -396,14 +398,14 @@ MediaRecorder::SetupTheoraBOS()
     vState->ti.aspect_denominator = 0;
     vState->ti.target_bitrate = 0;
 
-    /* Are these the right values? */ 
+    /* Are these the right values? */
     vState->ti.quality = (int)(params->qual * 100);
     vState->ti.colorspace = TH_CS_UNSPECIFIED;
     vState->ti.pixel_fmt = TH_PF_420;
 
     vState->th = th_encode_alloc(&vState->ti);
     th_info_clear(&vState->ti);
-    
+
     /* Header init */
     th_comment_init(&vState->tc);
     th_comment_add_tag(&vState->tc, (char *)"ENCODER", (char *)"rainbow");
@@ -413,13 +415,13 @@ MediaRecorder::SetupTheoraBOS()
         return NS_ERROR_FAILURE;
     }
     th_comment_clear(&vState->tc);
-    
+
     ogg_stream_packetin(&vState->os, &vState->op);
     if (ogg_stream_pageout(&vState->os, &vState->og) != 1) {
         PR_LOG(log, PR_LOG_NOTICE, ("Internal Ogg library error\n"));
         return NS_ERROR_FAILURE;
     }
-    
+
     rv = pipeOut->Write(
         (const char*)vState->og.header, vState->og.header_len, &wr
     );
@@ -493,17 +495,17 @@ MediaRecorder::SetupVorbisBOS()
         PR_LOG(log, PR_LOG_NOTICE, ("Failed vorbis_encode_init\n"));
         return NS_ERROR_FAILURE;
     }
-    
+
     vorbis_comment_init(&aState->vc);
     vorbis_comment_add_tag(&aState->vc, "ENCODER", "rainbow");
     vorbis_analysis_init(&aState->vd, &aState->vi);
     vorbis_block_init(&aState->vd, &aState->vb);
-    
+
     {
         ogg_packet header;
         ogg_packet header_comm;
         ogg_packet header_code;
-        
+
         vorbis_analysis_headerout(
             &aState->vd, &aState->vc,
             &header, &header_comm, &header_code
@@ -516,7 +518,7 @@ MediaRecorder::SetupVorbisBOS()
             PR_LOG(log, PR_LOG_NOTICE, ("Internal Ogg library error\n"));
             return NS_ERROR_FAILURE;
         }
-        
+
         rv = pipeOut->Write(
             (const char*)aState->og.header, aState->og.header_len, &wr
         );
@@ -592,7 +594,7 @@ MediaRecorder::RecordToFile(
     nsCOMPtr<nsIFileOutputStream> stream(
         do_CreateInstance("@mozilla.org/network/file-output-stream;1")
     );
-    
+
     pipeOut = do_QueryInterface(stream, &rv);
     if (NS_FAILED(rv)) return rv;
     rv = stream->Init(file, -1, -1, 0);
@@ -613,12 +615,12 @@ MediaRecorder::RecordToPipe(
 {
     nsresult rv;
     ParseProperties(prop);
-    
+
     /* Setup IO pipe */
     nsCOMPtr<nsIAsyncOutputStream> asyncPipe;
     rv = MakePipe(pipeIn, getter_AddRefs(asyncPipe));
     if (NS_FAILED(rv)) return rv;
-    
+
     pipeOut = do_QueryInterface(asyncPipe, &rv);
     if (NS_FAILED(rv)) return rv;
 
@@ -634,7 +636,7 @@ MediaRecorder::ParseProperties(nsIPropertyBag2 *prop)
     nsresult rv;
 
     rv = prop->GetPropertyAsBool(NS_LITERAL_STRING("audio"), &params->audio);
-    if (NS_FAILED(rv)) params->audio = PR_TRUE; 
+    if (NS_FAILED(rv)) params->audio = PR_TRUE;
     rv = prop->GetPropertyAsBool(NS_LITERAL_STRING("video"), &params->video);
     if (NS_FAILED(rv)) params->video = PR_TRUE;
     rv = prop->GetPropertyAsUint32(NS_LITERAL_STRING("fps_n"), &params->fps_n);
@@ -659,7 +661,7 @@ MediaRecorder::ParseProperties(nsIPropertyBag2 *prop)
 nsresult
 MediaRecorder::Record(nsIDOMCanvasRenderingContext2D *ctx)
 {
-    nsresult rv; 
+    nsresult rv;
 
     if (a_rec || v_rec) {
         PR_LOG(log, PR_LOG_NOTICE, ("Recording in progress\n"));
@@ -755,14 +757,14 @@ MediaRecorder::Stop()
 
     if (!a_rec && !v_rec) {
         PR_LOG(log, PR_LOG_NOTICE, ("No recording in progress\n"));
-        return NS_ERROR_FAILURE;    
+        return NS_ERROR_FAILURE;
     }
 
     if (v_rec) {
         rv = vState->backend->Stop();
         if (NS_FAILED(rv)) return rv;
     }
-    
+
     if (a_rec) {
         rv = aState->backend->Stop();
         if (NS_FAILED(rv)) return rv;
@@ -779,7 +781,7 @@ MediaRecorder::Stop()
     }
 
     PR_JoinThread(encoder);
-    
+
     if (v_rec) {
         vState->vPipeIn->Close();
         th_encode_free(vState->th);
@@ -797,10 +799,10 @@ MediaRecorder::Stop()
         ogg_stream_clear(&vState->os);
         v_rec = PR_FALSE;
     }
-    
+
     if (a_rec) {
         aState->aPipeIn->Close();
-    
+
         /* Audio trailer */
         vorbis_analysis_wrote(&aState->vd, 0);
         MediaRecorder::WriteAudio(this);
@@ -812,9 +814,41 @@ MediaRecorder::Stop()
         ogg_stream_clear(&aState->os);
         a_rec = PR_FALSE;
     }
- 
+
     /* GG */
     pipeOut->Close();
     return NS_OK;
 }
+
+CanvasRenderer::CanvasRenderer(
+    nsIDOMCanvasRenderingContext2D* pCanvasRenderingContext,
+    PRInt32 width,
+    PRInt32 height,
+    nsAutoArrayPtr<PRUint8>& pImageData,
+    PRInt32 sizeImageData)
+    : m_pCanvasRenderingContext(pCanvasRenderingContext),
+      m_width(width),
+      m_height(height),
+      m_pImageData(pImageData),
+      m_sizeImageData(sizeImageData) {
+
+}
+
+CanvasRenderer::~CanvasRenderer() {
+
+}
+
+NS_IMETHODIMP
+CanvasRenderer::Run() {
+  nsresult rv = m_pCanvasRenderingContext->PutImageData_explicit(
+      0,
+      0,
+      m_width,
+      m_height,
+      m_pImageData.get(),
+      m_sizeImageData);
+  return rv;
+}
+
+NS_IMPL_THREADSAFE_ISUPPORTS1(CanvasRenderer, nsIRunnable)
 

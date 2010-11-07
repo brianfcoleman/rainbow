@@ -325,8 +325,8 @@ bool VideoCaptureDeviceImpl::initSampleGrabberCallback() {
           m_IID_ISampleGrabberCB,
           rgbVideoFormat,
           m_videoFrameCallbackSet));
-  m_pSampleGrabberCallback = sampleGrabberCallbackPtr;
-  SampleGrabberCallback* pSampleGrabberCallback = m_pSampleGrabberCallback.get();
+  SampleGrabberCallback* pSampleGrabberCallback =
+      sampleGrabberCallbackPtr.get();
   if (!pSampleGrabberCallback) {
     return false;
   }
@@ -334,8 +334,16 @@ bool VideoCaptureDeviceImpl::initSampleGrabberCallback() {
   result = pSampleGrabber->SetCallback(
       pSampleGrabberCallback,
       VideoCaptureDeviceImpl::s_kUseBufferCB);
+  if (FAILED(result)) {
+    return false;
+  }
+  pSampleGrabberCallback = m_pSampleGrabberCallback.forget();
+  if (pSampleGrabberCallback) {
+    delete pSampleGrabberCallback;
+  }
+  m_pSampleGrabberCallback = sampleGrabberCallbackPtr;
 
-  return SUCCEEDED(result);
+  return true;
 }
 
 bool VideoCaptureDeviceImpl::initMediaControl() {

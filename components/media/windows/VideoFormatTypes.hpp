@@ -44,32 +44,18 @@ typedef enum RGBFormat {
   /**
    * Pixel interleaved format with each colour component stored in 8 bits.
    * The colour component order when iterating forward through the pixels
-   * is R G B.
-   * No alpha channel.
-   */
-  kRGB888 = 0,
-  /**
-   * Pixel interleaved format with each colour component stored in 8 bits.
-   * The colour component order when iterating forward through the pixels
-   * is R G B A.
-   * Includes an alpha channel.
-   */
-  kRGBA8888 = 1,
-  /**
-   * Pixel interleaved format with each colour component stored in 8 bits.
-   * The colour component order when iterating forward through the pixels
    * is B G R.
    * No alpha channel.
    */
-  kBGR888 = 2,
+  kBGR888 = 0,
   /**
    * Pixel interleaved format with each colour component stored in 8 bits.
    * The colour component order when iterating forward through the pixels
-   * is A B G R.
+   * is B G R A.
    * Includes an alpha channel.
    */
-  kABGR8888 = 3,
-  kRGBNone = 4
+  kBGRA8888 = 1,
+  kRGBNone = 2
 } RGBFormat;
 
 const PRInt32 kAngleFullRotationDegrees = 360;

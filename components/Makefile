@@ -93,7 +93,7 @@ headers = -I. -I$(sdkdir)/include \
     -I$(sdkdir)/sdk/include
 
 ifeq ($(os), WINNT)
-	headers += -I./windows
+	headers += -I./media/windows
 endif
 
 # libraries
@@ -145,6 +145,7 @@ ifeq ($(os), WINNT)
     cppflags += -MTd -DDEBUG
     ldops = -DEBUG msvcrtd.lib \
         /NODEFAULTLIB:libcmt /NODEFAULTLIB:msvcrt /NODEFAULTLIB:libcmtd
+	  libdir_winnt_x86_msvc := ../lib/WINNT_x86-msvc9d
   else
     cppflags += -MT
     ldops = msvcrt.lib /NODEFAULTLIB:libcmt
@@ -166,7 +167,7 @@ ifeq ($(os), WINNT)
     $(libdir_winnt_x86_msvc)/libvorbis.lib \
 	 	$(libdir_winnt_x86_msvc)/libtheora.lib \
     $(libdir_winnt_x86_msvc)/portaudio.lib \
-    strmiids.lib comsuppw.lib ole32.lib user32.lib $(ldops)
+    strmiids.lib ole32.lib oleaut32.lib user32.lib ksuser.lib advapi32.lib $(ldops)
 	rcflags := -r $(headers)
 else
 ifeq ($(os), Linux)

@@ -54,6 +54,7 @@
 #include <nsIAsyncOutputStream.h>
 #include <nsComponentManagerUtils.h>
 #include <nsIDOMCanvasRenderingContext2D.h>
+#include <nsIRunnable.h>
 
 /* ifdefs are evil, but I am powerless */
 #ifdef RAINBOW_Mac
@@ -91,7 +92,7 @@ typedef struct {
     th_comment tc;
     th_enc_ctx *th;
     ogg_stream_state os;
-    
+
     VideoSource *backend;
     nsCOMPtr<nsIAsyncInputStream> vPipeIn;
     nsCOMPtr<nsIAsyncOutputStream> vPipeOut;
@@ -103,6 +104,25 @@ typedef struct {
     PRBool audio, video;
     PRUint32 fps_n, fps_d, width, height, rate, chan;
 } Properties;
+
+class CanvasRenderer : public nsIRunnable {
+public:
+  CanvasRenderer(
+      nsIDOMCanvasRenderingContext2D* pCanvasRenderingContext,
+      PRInt32 width,
+      PRInt32 height,
+      nsAutoArrayPtr<PRUint8>& pImageData,
+      PRInt32 sizeImageData);
+  ~CanvasRenderer();
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIRUNNABLE
+private:
+  nsIDOMCanvasRenderingContext2D* m_pCanvasRenderingContext;
+  PRInt32 m_width;
+  PRInt32 m_height;
+  nsAutoArrayPtr<PRUint8> m_pImageData;
+  PRInt32 m_sizeImageData;
+};
 
 class MediaRecorder : public IMediaRecorder
 {
