@@ -143,12 +143,11 @@ ifeq ($(os), WINNT)
 
   ifeq ($(debug),1)
     cppflags += -MTd -DDEBUG
-    ldops = -DEBUG msvcrtd.lib \
-        /NODEFAULTLIB:libcmt /NODEFAULTLIB:msvcrt /NODEFAULTLIB:libcmtd
+    ldops = -DEBUG
 	  libdir_winnt_x86_msvc := ../lib/WINNT_x86-msvc9d
   else
     cppflags += -MT
-    ldops = msvcrt.lib /NODEFAULTLIB:libcmt
+    ldops =
   endif
 
   cppflags += -c -nologo -O1 -GR- -TP -Zc:wchar_t- -W3 -Gy $(headers) \
